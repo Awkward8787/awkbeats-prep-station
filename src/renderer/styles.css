@@ -49,7 +49,7 @@ button { cursor: pointer; }
   border-bottom: 1px solid var(--line);
 }
 .brand { display: flex; align-items: center; gap: 10px; min-width: 220px; background: none; border: 0; padding: 0; text-align: left; }
-.brand-mark { width: 32px; height: 32px; display: block; }
+.brand-mark { width: 36px; height: 36px; display: block; object-fit: contain; }
 .brand-name { font-weight: 600; letter-spacing: 0.14em; font-size: 13px; }
 .brand-name span { color: var(--gold); }
 .brand-sub { display: block; color: var(--text-faint); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; }
@@ -205,6 +205,7 @@ table.tracks { width: 100%; border-collapse: collapse; }
   padding: 32px;
 }
 .empty h2 { color: var(--text); letter-spacing: 0; text-transform: none; font-size: 22px; font-weight: 600; }
+.empty-mark { width: 88px; height: 88px; object-fit: contain; margin: 0 auto 16px; display: block; }
 .drop {
   position: fixed;
   inset: 60px 0 30px;

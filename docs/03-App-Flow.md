@@ -7,7 +7,7 @@
 | Project | AwkBeats Prep Station |
 | Document title | App Flow |
 | Document ID | ABP-FLOW |
-| Version | 1.0 |
+| Version | 1.1 |
 | Status | Final (as shipped) |
 | Last updated | 2026-10-21 (UTC) |
 | Author | Cursor Agent, for owner Awkward J |
@@ -256,6 +256,7 @@ A phone-width screenshot is not a product surface. The 980px collapse is describ
 | Date | Version | Change | Why |
 | --- | --- | --- | --- |
 | 2026-10-21 | 1.0 | Flow for the single-window 1.0.0 app. | Owner build brief. |
+| 2026-10-21 | 1.1 | The title bar, empty library, no-match state, and About box use `build/logo.png`. | Owner supplied the transparent logo. |
 
 ## 13. Sources
 

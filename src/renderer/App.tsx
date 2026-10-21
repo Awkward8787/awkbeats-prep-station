@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import logoUrl from '../../build/logo.png';
 import { TrackAnalyzer } from '@core/analysis/TrackAnalyzer';
 import { BpmMath } from '@core/analysis/BpmMath';
 import { BeatQuery } from '@core/library/BeatRules';
@@ -257,12 +258,18 @@ export function App() {
           {beats.length === 0 ? (
             <div className="empty">
               <div>
+                <img className="empty-mark" src={logoUrl} alt="AwkBeats" />
                 <h2>{UserMessage.emptyTitle}</h2>
                 <p className="muted">{UserMessage.emptyBody}</p>
               </div>
             </div>
           ) : visible.length === 0 ? (
-            <div className="empty"><h2>{UserMessage.noMatches}</h2></div>
+            <div className="empty">
+              <div>
+                <img className="empty-mark" src={logoUrl} alt="" />
+                <h2>{UserMessage.noMatches}</h2>
+              </div>
+            </div>
           ) : (
             <TrackTable
               beats={visible}
@@ -380,12 +387,6 @@ export function App() {
 }
 
 export function BrandMark() {
-  return (
-    <svg className="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
-      <rect width="32" height="32" rx="8" fill="#17140e" stroke="#e4b15a" />
-      <path d="M6 18.5c2.2-6 3.2-6 4.4 0s2.2 6 4.4 0 2.2-6 4.4 0 2.2 6 4.4 0" fill="none" stroke="#e4b15a" strokeWidth="1.6" strokeLinecap="round" />
-      <text x="16" y="13" textAnchor="middle" fontFamily="IBM Plex Sans, sans-serif" fontSize="7" fill="#f4f0e8" fontWeight="600">AJ</text>
-    </svg>
-  );
+  return <img className="brand-mark" src={logoUrl} alt="" />;
 }
 

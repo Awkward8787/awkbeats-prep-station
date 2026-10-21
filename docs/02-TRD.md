@@ -7,7 +7,7 @@
 | Project | AwkBeats Prep Station |
 | Document title | Technical Requirements Document |
 | Document ID | ABP-TRD |
-| Version | 1.0 |
+| Version | 1.1 |
 | Status | Final (as shipped) |
 | Last updated | 2026-10-21 (UTC) |
 | Author | Cursor Agent, for owner Awkward J |
@@ -109,7 +109,7 @@ tests/fixtures/silence.flac
 scripts/dev.mjs           Vite + esbuild watch + Electron
 scripts/check-licenses.mjs
 scripts/seed-demo.ts      local demo library, not shipped in the installer
-build/icon.svg, icon.png, icon.ico
+build/icon.png, logo.png, icon.ico, icon.icns, icons/
 electron-builder.yml
 .github/workflows/installers.yml
 docs/                     this documentation set
@@ -343,6 +343,7 @@ Electron and Chromium write their default stderr. The app does not log file cont
 | Date | Version | Change | Why |
 | --- | --- | --- | --- |
 | 2026-10-21 | 1.0 | Initial TRD for the 1.0.0 Electron tree. | Owner build brief. Muted text color raised to `#938d85` so small labels meet WCAG AA. |
+| 2026-10-21 | 1.1 | Installer icons are `build/icon.icns`, `build/icon.ico`, and `build/icons/`. | Owner supplied the iOS icon. |
 
 ## 20. Sources
 

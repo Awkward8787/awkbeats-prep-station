@@ -7,7 +7,7 @@
 | Project | AwkBeats Prep Station |
 | Document title | Product Requirements Document |
 | Document ID | ABP-PRD |
-| Version | 1.0 |
+| Version | 1.1 |
 | Status | Final (as shipped) |
 | Last updated | 2026-10-21 (UTC) |
 | Author | Cursor Agent, for owner Awkward J |
@@ -249,7 +249,7 @@ Everything in the functional table marked Shipped: local library, analysis, tags
 
 ## 12. Assumptions and constraints
 
-- The owner is the producer Awkward J, brand AwkBeats, site awkbeats.com. No logo file was supplied. The mark in `build/icon.svg` and the in-app SVG were drawn for this project and need brand approval (open question).
+- The owner is the producer Awkward J, brand AwkBeats, site awkbeats.com. The installer icon is the iOS app icon (`build/icon.png`, gold A with a purple accent on black). The transparent file `build/logo.png` is the in-app mark. The earlier drawn AJ mark was removed.
 - Budget, team size, and a launch date were not given.
 - Hosting is the user's computer plus GitHub Actions for installers. There is no application server.
 - Analysis must stay permissively licensed because the app may be sold.
@@ -295,7 +295,7 @@ Everything in the functional table marked Shipped: local library, analysis, tags
 | Q-001 | What legal entity holds the copyright and would receive payment? | Awkward J | Signing identity, sale terms |
 | Q-002 | Is a proprietary "all rights reserved" license the one the owner wants? | Awkward J | LICENSE file |
 | Q-003 | Does the owner have an ISRC registrant prefix to validate against, or is the 12-character shape enough? | Awkward J | Stricter ISRC check |
-| Q-004 | Is the drawn AwkBeats mark approved? | Awkward J | Icon and brand control |
+| Q-004 | Resolved. The owner supplied the iOS app icon and the transparent logo. They replace the drawn AJ mark. | Awkward J | None |
 | Q-005 | Will the app be sold, and at what price, through which store? | Awkward J | Monetization. No price was provided. |
 | Q-006 | Contact email for support? | Awkward J | Not shown in the app |
 
@@ -304,6 +304,7 @@ Everything in the functional table marked Shipped: local library, analysis, tags
 | Date | Version | Change | Why |
 | --- | --- | --- | --- |
 | 2026-10-21 | 1.0 | Initial PRD reconciled to the shipped 1.0.0 tree. | Owner build brief. |
+| 2026-10-21 | 1.1 | Installer and in-app marks are the iOS logo. `build/icon.svg` is gone. | Owner supplied `icon.png` and the transparent logo. |
 
 ## 18. Sources
 

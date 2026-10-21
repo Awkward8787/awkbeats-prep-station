@@ -7,7 +7,7 @@
 | Project | AwkBeats Prep Station |
 | Document title | Implementation Plan |
 | Document ID | ABP-PLAN |
-| Version | 1.0 |
+| Version | 1.1 |
 | Status | Final (as shipped) |
 | Last updated | 2026-10-21 (UTC) |
 | Author | Cursor Agent, for owner Awkward J |
@@ -81,7 +81,7 @@ Caption: The build landed in one working tree. The signing bar is the owner's, a
 | TASK-010 | Apple notarization | Owner | NFR-003 follow-up | Planned | Secrets in README |
 | TASK-011 | Windows Authenticode | Owner | NFR-003 follow-up | Planned | EV recommended |
 | TASK-012 | Confirm legal entity and license | Owner | Q-001, Q-002 | Planned | LICENSE is proprietary pending confirmation |
-| TASK-013 | Brand approval of the AJ mark | Owner | Q-004 | Planned | `build/icon.svg` |
+| TASK-013 | Use the iOS app icon and transparent logo | Owner | Q-004 | Shipped | `build/icon.png`, `build/logo.png`. AJ svg removed |
 | TASK-014 | Do not publish a Release | Build | brief | Shipped | `publish: null` |
 
 The pull request that contains this file is the delivery PR into `main`. Commit SHAs are on that branch.
@@ -169,7 +169,7 @@ Owner actions, in order:
 3. **Confirm the legal entity** for the copyright string. The app currently says Awkward J. Q-001.
 4. **Confirm the license.** The repo ships `LICENSE` as all rights reserved because the app may be sold. Say if that should change. Q-002.
 5. **ISRC.** The check is 12 characters. Provide a registrant prefix only if you want a tighter check. Q-003.
-6. **Brand.** Approve `build/icon.svg` or send a replacement. Q-004.
+6. **Brand.** Done. The iOS icon is the installer art. The transparent logo is the in-app mark. Q-004.
 7. **Distribution.** Decide where installers are downloaded. Do not use a GitHub Release until you ask for one. This delivery does not publish one.
 8. **Support email.** None is shown. Send one if it should appear. Q-006.
 
@@ -223,7 +223,7 @@ The open questions from the other documents apply here. The ones that block owne
 | Q-001 | Legal entity | Awkward J | Apple certificate name |
 | Q-002 | Keep the proprietary license? | Awkward J | LICENSE |
 | Q-003 | ISRC prefix | Awkward J | Tighter validation |
-| Q-004 | Approve the mark | Awkward J | Icon |
+| Q-004 | Resolved. iOS icon and transparent logo are in `build/` | Awkward J | None |
 | Q-005 | Sell or not, price, store | Awkward J | Monetization. No price in the brief. |
 | Q-006 | Support email | Awkward J | Footer or About |
 | Q-007 | OV or EV Windows certificate | Awkward J | SmartScreen |
@@ -234,6 +234,7 @@ The open questions from the other documents apply here. The ones that block owne
 | Date | Version | Change | Why |
 | --- | --- | --- | --- |
 | 2026-10-21 | 1.0 | Plan for the 1.0.0 delivery, including owner signing steps and an explicit decision not to publish a Release. | Owner build brief. |
+| 2026-10-21 | 1.1 | TASK-013 shipped. The AJ svg is removed. | Owner supplied the iOS icon and transparent logo. |
 
 ## 15. Sources
 

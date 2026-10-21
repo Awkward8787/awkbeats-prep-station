@@ -7,7 +7,7 @@
 | Project | AwkBeats Prep Station |
 | Document title | Design Brief |
 | Document ID | ABP-DESIGN |
-| Version | 1.0 |
+| Version | 1.1 |
 | Status | Final (as shipped) |
 | Last updated | 2026-10-21 (UTC) |
 | Author | Cursor Agent, for owner Awkward J |
@@ -58,16 +58,17 @@ Audience reminder: a producer at a desk, often for hours. Density is welcome. De
 
 ## 2. Logo and mascot
 
-There is no mascot. No owner-supplied logo file was in the repo. The mark was drawn for this app and is UNCONFIRMED as the official AwkBeats logo (Q-004).
+There is no mascot. The mark is the owner's AwkBeats iOS icon: a gold A with a purple inner facet. Q-004 is resolved.
 
 | Asset | Path | Use |
 | --- | --- | --- |
-| Source mark | `build/icon.svg` | Rounded rectangle, gold waveform, letters AJ |
-| App icon | `build/icon.png` 1024×1024 | electron-builder mac icon |
-| Windows icon | `build/icon.ico` | electron-builder win icon |
-| In-app mark | `BrandMark` in `src/renderer/App.tsx` | 32×32 in the top bar |
+| App icon | `build/icon.png` 1024×1024, opaque, black ground | Source for every installer target |
+| macOS icon | `build/icon.icns` | `electron-builder.yml` `mac.icon` and `dmg.icon`. PNG chunks icp4, icp5, ic11, icp6, ic12, ic07, ic08, ic13, ic09, ic14, ic10 |
+| Windows icon | `build/icon.ico` | `win.icon`, NSIS installer and uninstaller. Sizes 16, 24, 32, 48, 64, 128, 256 |
+| Linux icons | `build/icons/<size>x<size>.png` | `linux.icon`. Sizes 16, 24, 32, 48, 64, 128, 256, 512, 1024 |
+| In-app mark | `build/logo.png` 1024×1024, RGBA | Title bar, empty states, about panel. `BrandMark` in `src/renderer/App.tsx` is 36×36. Empty state is 88×88 |
 
-Clear space: keep at least the mark's height empty around it in marketing. Minimum size: 32px in the UI, 1024 source for the installer. Backgrounds: the mark includes its own dark rounded rect, so it can sit on `#0c0d10`. Do not recolor the gold, do not stretch it, do not add a new letterform unless the owner approves.
+Clear space: keep at least a quarter of the mark's height empty around it in marketing. Do not recolor the gold or the purple, do not stretch it, and do not put the opaque black square in the title bar. The title bar and empty states use the transparent file so the A sits on `#0c0d10`. The retired AJ waveform is not in the repo.
 
 There is no Open Graph image and no favicon separate from the app icon. Not applicable for a desktop window.
 
@@ -198,7 +199,7 @@ Code lives in `src/renderer/styles.css` and the TSX files named below.
 
 ## 8. Iconography and illustration
 
-The only illustration is the brand mark (waveform plus AJ) and the analysis waveform, which is a gold SVG path of the beat's 160 peaks (stroke `#e4b15a` via `--gold`, width 1.4, no fill). Status uses CSS dots, not an icon font. No third-party icon set.
+The only illustration is the AwkBeats A (gold with a purple facet) and the analysis waveform, which is a gold SVG path of the beat's 160 peaks (stroke `#e4b15a` via `--gold`, width 1.4, no fill). Status uses CSS dots, not an icon font. No third-party icon set.
 
 ## 9. Motion
 
@@ -276,7 +277,7 @@ Annotated notes: the tempo figure is `.tempo` at 40px mono. The Camelot code sit
 
 | ID | Question | Owner | Blocked |
 | --- | --- | --- | --- |
-| Q-004 | Approve or replace the drawn AJ mark | Awkward J | Final brand |
+| Q-004 | Resolved. The iOS icon and transparent logo are the marks in `build/`. | Awkward J | None |
 | Q-010 | Is a wordmark lockup needed beyond the top bar? | Awkward J | Marketing site, not this app |
 
 ## 18. Changelog
@@ -284,10 +285,11 @@ Annotated notes: the tempo figure is `.tempo` at 40px mono. The Camelot code sit
 | Date | Version | Change | Why |
 | --- | --- | --- | --- |
 | 2026-10-21 | 1.0 | Brief matched to `styles.css`, including the faint-color contrast fix. | Owner build brief. `#7e786e` failed AA for 11px labels. |
+| 2026-10-21 | 1.1 | The mark is the iOS gold A. Transparent file in the window, opaque file on installers. | Owner supplied the logo. |
 
 ## 19. Sources
 
 - `src/renderer/styles.css`, `main.tsx`, `App.tsx`, `Inspector.tsx`, `dialogs.tsx`.
-- `build/icon.svg`, `build/icon.png`, `build/icon.ico`.
+- `build/icon.png`, `build/logo.png`, `build/icon.ico`, `build/icon.icns`, `build/icons/`.
 - Contrast script run locally on 2026-10-21 (WCAG relative luminance).
 - `@fontsource/ibm-plex-sans` and `@fontsource/ibm-plex-mono` license: SIL OFL 1.1.

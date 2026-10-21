@@ -7,10 +7,15 @@ directories:
 files:
   - dist/**/*
   - package.json
+  - build/icon.png
+  - build/logo.png
+extraResources:
+  - from: build/logo.png
+    to: logo.png
 asar: true
 mac:
   category: public.app-category.music
-  icon: build/icon.png
+  icon: build/icon.icns
   identity: null
   hardenedRuntime: false
   gatekeeperAssess: false
@@ -21,6 +26,7 @@ mac:
         - x64
 dmg:
   title: AwkBeats Prep Station
+  icon: build/icon.icns
 win:
   icon: build/icon.ico
   target:
@@ -33,6 +39,10 @@ nsis:
   perMachine: false
   allowToChangeInstallationDirectory: true
   shortcutName: AwkBeats Prep Station
+  installerIcon: build/icon.ico
+  uninstallerIcon: build/icon.ico
   artifactName: AwkBeats-Prep-Station-${version}-win-${arch}.${ext}
+linux:
+  icon: build/icons
 artifactName: AwkBeats-Prep-Station-${version}-${os}-${arch}.${ext}
 publish: null

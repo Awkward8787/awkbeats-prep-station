@@ -1,6 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
-  <rect width="1024" height="1024" rx="224" fill="#14120c"/>
-  <rect x="48" y="48" width="928" height="928" rx="188" fill="none" stroke="#e4b15a" stroke-width="28"/>
-  <text x="512" y="430" text-anchor="middle" font-family="Georgia, serif" font-size="220" fill="#f4f0e8" font-weight="700">AJ</text>
-  <path d="M160 690c70-150 100-150 150 0s80 150 150 0 80-150 150 0 80 150 150 0 80-150 150 0" fill="none" stroke="#e4b15a" stroke-width="36" stroke-linecap="round"/>
-</svg>

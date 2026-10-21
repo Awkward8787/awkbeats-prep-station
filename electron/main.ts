@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, Menu, net, protocol, shell } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, Menu, nativeImage, net, protocol, shell } from 'electron';
 import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -12,6 +12,16 @@ import { TagCommit } from '../src/core/tags/TagCommit';
 import { TagWriter } from '../src/core/tags/TagWriter';
 
 const SITE = 'https://awkbeats.com';
+
+function brandLogoPath(): string {
+  const unpacked = path.join(process.resourcesPath, 'logo.png');
+  if (app.isPackaged && fs.existsSync(unpacked)) return unpacked;
+  return path.join(app.getAppPath(), 'build', 'logo.png');
+}
+
+function appIconPath(): string {
+  return path.join(app.getAppPath(), 'build', 'icon.png');
+}
 
 if (process.env.AWKBEATS_USER_DATA) {
   app.setPath('userData', process.env.AWKBEATS_USER_DATA);
@@ -56,6 +66,7 @@ async function createWindow(): Promise<void> {
     minHeight: 700,
     backgroundColor: '#0c0d10',
     title: 'AwkBeats Prep Station',
+    icon: appIconPath(),
     show: false,
     autoHideMenuBar: false,
     webPreferences: {
@@ -133,6 +144,7 @@ function buildMenu(): void {
                   title: 'About AwkBeats Prep Station',
                   message: 'AwkBeats Prep Station',
                   detail: `Version ${version()}\nPrepare beats for Awkward J.\n${SITE}\n\nKey and tempo are measured on this computer. Nothing is uploaded.`,
+                  icon: nativeImage.createFromPath(brandLogoPath()),
                 });
               },
             }]),
@@ -149,6 +161,7 @@ app.setAboutPanelOptions({
   version: '1.0.0',
   copyright: 'Awkward J · awkbeats.com',
   credits: 'Key and tempo are measured on this computer. Nothing is uploaded.',
+  iconPath: brandLogoPath(),
 });
 
 app.whenReady().then(async () => {
