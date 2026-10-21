@@ -1,0 +1,38 @@
+appId: com.awkbeats.prepstation
+productName: AwkBeats Prep Station
+copyright: Copyright © 2026 Awkward J
+directories:
+  output: release
+  buildResources: build
+files:
+  - dist/**/*
+  - package.json
+asar: true
+mac:
+  category: public.app-category.music
+  icon: build/icon.png
+  identity: null
+  hardenedRuntime: false
+  gatekeeperAssess: false
+  target:
+    - target: dmg
+      arch:
+        - arm64
+        - x64
+dmg:
+  title: AwkBeats Prep Station
+win:
+  icon: build/icon.ico
+  target:
+    - target: nsis
+      arch:
+        - x64
+  signAndEditExecutable: true
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  shortcutName: AwkBeats Prep Station
+  artifactName: AwkBeats-Prep-Station-${version}-win-${arch}.${ext}
+artifactName: AwkBeats-Prep-Station-${version}-${os}-${arch}.${ext}
+publish: null

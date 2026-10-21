@@ -1,0 +1,47 @@
+{
+  "name": "awkbeats-prep-station",
+  "version": "1.0.0",
+  "private": true,
+  "description": "AwkBeats Prep Station — local desktop catalog for preparing beats. Producer: Awkward J.",
+  "author": "Awkward J <https://awkbeats.com>",
+  "main": "dist/main/index.js",
+  "type": "commonjs",
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "build:main": "esbuild electron/main.ts --bundle --platform=node --format=cjs --outfile=dist/main/index.js --external:electron --external:music-metadata --sourcemap",
+    "build:preload": "esbuild electron/preload.ts --bundle --platform=node --format=cjs --outfile=dist/preload/index.js --external:electron --sourcemap",
+    "build:renderer": "vite build",
+    "build": "npm run build:main && npm run build:preload && npm run build:renderer",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "licenses": "node scripts/check-licenses.mjs",
+    "dist:mac": "npm run build && electron-builder --mac --publish never",
+    "dist:win": "npm run build && electron-builder --win --publish never",
+    "start": "electron ."
+  },
+  "dependencies": {
+    "@fontsource/ibm-plex-mono": "^5.2.5",
+    "@fontsource/ibm-plex-sans": "^5.2.5",
+    "music-metadata": "^7.14.0",
+    "node-id3": "^0.2.6",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.4",
+    "concurrently": "^9.1.0",
+    "electron": "^33.2.1",
+    "electron-builder": "^25.1.8",
+    "esbuild": "^0.24.2",
+    "marked": "^14.1.4",
+    "mermaid": "^11.12.0",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.6",
+    "vitest": "^2.1.8",
+    "wait-on": "^8.0.1"
+  }
+}
