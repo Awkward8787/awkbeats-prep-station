@@ -13,7 +13,7 @@
 | Author | Cursor Agent, for owner Awkward J |
 | Repo | https://github.com/Awkward8787/awkbeats-prep-station |
 | Branch | `cursor/awkbeats-prep-station-e2e2` |
-| Commit SHA | Recorded in the changelog of the shipping commit that contains this file |
+| Commit SHA | f99d3c6a38ad256e123fa13b50e0f7660369bd61 |
 | Live URL | None. Desktop app. Brand site: https://awkbeats.com |
 | Operator | Awkward J (legal entity UNCONFIRMED) |
 

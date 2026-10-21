@@ -231,6 +231,7 @@ const cover = `
   <p>Operator: Awkward J (legal entity UNCONFIRMED). Brand site: https://awkbeats.com. There is no hosted app URL.</p>
   <p>Repository: https://github.com/Awkward8787/awkbeats-prep-station</p>
   <p>Branch: cursor/awkbeats-prep-station-e2e2</p>
+  <p>Commit: f99d3c6a38ad256e123fa13b50e0f7660369bd61</p>
   <p>Date: 2026-10-21 (UTC). Status: Final (as shipped).</p>
   <h2>Contents</h2>
   <ul class="toc">
