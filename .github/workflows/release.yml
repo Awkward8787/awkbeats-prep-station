@@ -47,6 +47,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run dist:mac
+      - run: bash scripts/verify-mac-signature.sh
       - uses: actions/upload-artifact@v4
         with:
           name: release-macos

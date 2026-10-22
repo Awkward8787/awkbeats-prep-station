@@ -40,10 +40,10 @@ npm run dev
 
 Unsigned installers are built in GitHub Actions on every branch push (`.github/workflows/installers.yml`) and uploaded as workflow artifacts:
 
-- macOS: `release/AwkBeats-Prep-Station-1.0.0-mac-arm64.dmg` and `…-mac-x64.dmg` (artifact `AwkBeats-Prep-Station-macOS`)
-- Windows: `release/AwkBeats-Prep-Station-1.0.0-win-x64.exe` (artifact `AwkBeats-Prep-Station-Windows`)
+- macOS: `release/AwkBeats-Prep-Station-1.0.1-mac-arm64.dmg` and `…-mac-x64.dmg` (artifact `AwkBeats-Prep-Station-macOS`). The app is ad-hoc signed (`codesign -s -`). Hardened runtime stays off.
+- Windows: `release/AwkBeats-Prep-Station-1.0.1-win-x64.exe` (artifact `AwkBeats-Prep-Station-Windows`)
 
-Pushing a tag that matches `v*` runs `.github/workflows/release.yml`. It builds the same unsigned disk images (arm64 and x64) and the Windows NSIS installer, then attaches them to the GitHub Release for that tag. The notes are `.github/release-notes.md`. `npm run dist:mac` and `npm run dist:win` still pass `--publish never`, and `electron-builder.yml` keeps `publish: null`, so the builder itself does not create the Release.
+Pushing a tag that matches `v*` runs `.github/workflows/release.yml`. It builds the same disk images (arm64 and x64) and the Windows NSIS installer, then attaches them to the GitHub Release for that tag. The notes are `.github/release-notes.md`. `npm run dist:mac` and `npm run dist:win` still pass `--publish never`, and `electron-builder.yml` keeps `publish: null`, so the builder itself does not create the Release.
 
 Local equivalents, on the matching OS:
 
@@ -52,7 +52,7 @@ npm run dist:mac
 npm run dist:win
 ```
 
-The installers are unsigned. macOS needs a right-click, then Open. Windows SmartScreen needs More info, then Run anyway.
+The installers are not notarized. On macOS, if Gatekeeper still blocks the app, run `xattr -cr "/Applications/AwkBeats Prep Station.app"` or right-click the app and choose Open. On Windows, if SmartScreen appears, choose More info, then Run anyway.
 
 ## Code signing and notarization
 
