@@ -7,7 +7,7 @@
 | Project | AwkBeats Prep Station |
 | Document title | Design Brief |
 | Document ID | ABP-DESIGN |
-| Version | 1.4 |
+| Version | 1.5 |
 | Status | Final (as shipped) |
 | Last updated | 2026-10-22 (UTC) |
 | Author | Cursor Agent, for owner Awkward J |
@@ -134,7 +134,7 @@ Only the wordmark stays uppercase. Section titles and table headers are sentence
 
 ## 5. Spacing, layout, and grid
 
-The app grid is a 60px top bar, a flexible workspace, and a 36px footer. At 1360px and wider the workspace is 248px, a flexible table, and a 380px inspector. At 1359px and below it is `216px minmax(0, 1fr) 340px`, and the genre column is hidden. The table is `table-layout: fixed`. Column widths are checkbox 40, BPM 72, Key 132, Genre 112, Status 120, Date 104. The title column takes the rest and ellipsizes both lines. There is no 980px breakpoint. The window minimum is 1100×700 and the default is 1440×920.
+The app grid is a 60px top bar, a flexible workspace, and a 36px footer. At 1360px and wider the workspace is 248px, a flexible table, and a 380px inspector. At 1359px and below it is `216px minmax(0, 1fr) 340px`. Genre and Date are hidden. Key is 124 and Status is 132 so the status pill, including "In progress", stays inside the cell. The table is `table-layout: fixed`. At 1360 and wider the column widths are checkbox 40, BPM 72, Key 132, Genre 112, Status 120, Date 104. The title column takes the rest and ellipsizes both lines. There is no 980px breakpoint. The window minimum is 1100×700 and the default is 1440×920.
 
 Spacing is 4, 8, 12, 16, 24, and 32. Eight between related controls, 16 inside panels, 24 between inspector sections, 32 around the empty state. The search field is at most 480px wide.
 
@@ -273,6 +273,7 @@ Annotated notes: the tempo figure is `.tempo` at 32px, weight 600, tabular. The 
 | 2026-10-22 | 1.2 | Window surfaces moved off black toward the logo purple. | Superseded by 1.3. |
 | 2026-10-22 | 1.3 | Plum scale and gold accent in `Theme.ts`. Sentence case. One footer credit. BPM integers. Key confidence under 0.45 asks for an ear check. | UI review. The app is for any producer, so no default name. |
 | 2026-10-22 | 1.4 | Waveform stroke is 1.6, gold on the played portion and faint on the rest. One gold primary per screen. | Round 2 review. |
+| 2026-10-22 | 1.5 | Below 1360, Status is 132 and Key is 124. The status pill padding is 6px and the dot does not add a second gap. | The 112px status column clipped "In progress" and drew an ellipsis at the table edge. |
 
 ## 19. Sources
 
