@@ -227,6 +227,8 @@ describe('ImportProgress', () => {
     expect(UserMessage.stopped(3, 40, 7, 33)).toBe(
       'Stopped after 3 of 40. 7 beats imported. 33 still need key and BPM. Select them and choose Re-analyze.',
     );
+    expect(UserMessage.stoppedTone(0)).toBe('ok');
+    expect(UserMessage.stoppedTone(33)).toBe('look');
     expect(UserMessage.namesApplied).toBe('Titles updated in the library. Files are unchanged until you write tags.');
   });
 });

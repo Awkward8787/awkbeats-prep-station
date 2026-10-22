@@ -414,7 +414,7 @@ textarea { resize: vertical; }
 .field label.check-row { font-size: 14px; color: var(--text); }
 .field .check-row { margin-left: -8px; }
 .field + .field { margin-top: 16px; }
-.table-hint { padding: 16px; color: var(--text-faint); font-size: 13px; }
+.table-hint { padding: 16px 16px 128px; color: var(--text-faint); font-size: 13px; }
 
 .powered { border: 0; background: transparent; color: var(--text-faint); font-size: 12px; padding: 4px; }
 .powered span { color: var(--text-dim); font-weight: 600; }
@@ -445,9 +445,11 @@ textarea { resize: vertical; }
   align-items: flex-start;
   pointer-events: auto;
 }
-.toast.error { color: var(--danger-text); }
+.toast.error { color: var(--danger-text); border-color: var(--danger-text); }
 .toast.look { border-color: var(--gold); color: var(--gold-text); }
+.toast-flag { flex: none; font-weight: 600; }
 .toast button { border: 0; background: transparent; color: var(--danger-text); }
+.toast button.toast-dismiss { flex: none; box-sizing: border-box; width: 28px; height: 28px; min-width: 28px; min-height: 28px; padding: 0; line-height: 28px; }
 .toast.look button { color: var(--gold-text); }
 .toast button.toast-action { color: var(--gold-text); font-weight: 600; padding: 0; white-space: nowrap; }
 

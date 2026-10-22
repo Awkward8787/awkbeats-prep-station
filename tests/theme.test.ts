@@ -25,4 +25,15 @@ describe('Theme', () => {
     expect(main).toContain('Theme.bg');
     expect(main).not.toMatch(/backgroundColor:\s*'#/);
   });
+
+  it('keeps the last row clear of a toast and marks errors without color alone', () => {
+    const css = fs.readFileSync(path.join(__dirname, '../src/renderer/styles.css'), 'utf8');
+    expect(css).toContain('.table-hint { padding: 16px 16px 128px;');
+    expect(css).toContain('.toast.error { color: var(--danger-text); border-color: var(--danger-text); }');
+    expect(css).toContain('min-width: 28px; min-height: 28px;');
+    const app = fs.readFileSync(path.join(__dirname, '../src/renderer/App.tsx'), 'utf8');
+    expect(app).toContain('UserMessage.stoppedTone(pendingAnalysis)');
+    expect(app).toContain('className="toast-flag">Error');
+    expect(app).toContain('className="toast-dismiss"');
+  });
 });

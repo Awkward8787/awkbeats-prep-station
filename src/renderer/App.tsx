@@ -202,7 +202,7 @@ export function App() {
         }
         const pendingAnalysis = result.needsDecode.length - decodedSoFar;
         if (stopRef.current || result.cancelled) {
-          toast(UserMessage.stopped(run.snapshot.done, run.snapshot.total, result.imported.length, pendingAnalysis));
+          toast(UserMessage.stopped(run.snapshot.done, run.snapshot.total, result.imported.length, pendingAnalysis), UserMessage.stoppedTone(pendingAnalysis));
         } else {
           const problems = result.failed.length + unanalyzed.length;
           toast(UserMessage.imported(result.imported.length, result.duplicates, result.failed.length, unanalyzed), problems ? 'look' : 'ok');
@@ -611,9 +611,10 @@ export function App() {
       <div className="toast-wrap">
         {toasts.map((item) => (
           <div className={item.tone === 'ok' ? 'toast' : `toast ${item.tone}`} key={item.id} role={item.tone === 'error' ? 'alert' : 'status'}>
+            {item.tone === 'error' ? <strong className="toast-flag">Error</strong> : null}
             <span>{item.text}</span>
             {item.action ? <button className="toast-action" type="button" onClick={item.action.run}>{item.action.label}</button> : null}
-            {item.tone !== 'ok' ? <button type="button" aria-label="Dismiss" onClick={() => setToasts((current) => current.filter((toastItem) => toastItem.id !== item.id))}>×</button> : null}
+            {item.tone !== 'ok' ? <button className="toast-dismiss" type="button" aria-label="Dismiss" onClick={() => setToasts((current) => current.filter((toastItem) => toastItem.id !== item.id))}>×</button> : null}
           </div>
         ))}
       </div>
