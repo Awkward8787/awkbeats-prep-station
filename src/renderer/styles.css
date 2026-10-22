@@ -447,7 +447,7 @@ textarea { resize: vertical; }
 }
 .toast.error { color: var(--danger-text); border-color: var(--danger-text); }
 .toast.look { border-color: var(--gold); color: var(--gold-text); }
-.toast-flag { flex: none; font-weight: 600; }
+.toast-flag { flex: none; font-weight: 600; margin-right: 8px; }
 .toast button { border: 0; background: transparent; color: var(--danger-text); }
 .toast button.toast-dismiss { flex: none; box-sizing: border-box; width: 28px; height: 28px; min-width: 28px; min-height: 28px; padding: 0; line-height: 28px; }
 .toast.look button { color: var(--gold-text); }

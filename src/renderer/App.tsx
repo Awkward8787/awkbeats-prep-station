@@ -611,7 +611,7 @@ export function App() {
       <div className="toast-wrap">
         {toasts.map((item) => (
           <div className={item.tone === 'ok' ? 'toast' : `toast ${item.tone}`} key={item.id} role={item.tone === 'error' ? 'alert' : 'status'}>
-            {item.tone === 'error' ? <strong className="toast-flag">Error</strong> : null}
+            {item.tone === 'error' ? <strong className="toast-flag">Error<span className="sr">: </span></strong> : null}
             <span>{item.text}</span>
             {item.action ? <button className="toast-action" type="button" onClick={item.action.run}>{item.action.label}</button> : null}
             {item.tone !== 'ok' ? <button className="toast-dismiss" type="button" aria-label="Dismiss" onClick={() => setToasts((current) => current.filter((toastItem) => toastItem.id !== item.id))}>×</button> : null}

@@ -33,7 +33,9 @@ describe('Theme', () => {
     expect(css).toContain('min-width: 28px; min-height: 28px;');
     const app = fs.readFileSync(path.join(__dirname, '../src/renderer/App.tsx'), 'utf8');
     expect(app).toContain('UserMessage.stoppedTone(pendingAnalysis)');
-    expect(app).toContain('className="toast-flag">Error');
+    const flag = app.match(/<strong className="toast-flag">([\s\S]*?)<\/strong>/)?.[1] ?? '';
+    expect(flag.replace(/<[^>]+>/g, '')).toBe('Error: ');
+    expect(css).toContain('.toast-flag { flex: none; font-weight: 600; margin-right: 8px; }');
     expect(app).toContain('className="toast-dismiss"');
   });
 });
