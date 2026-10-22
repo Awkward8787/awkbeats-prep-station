@@ -432,7 +432,7 @@ textarea { resize: vertical; }
 .drop img { width: 48px; height: 48px; }
 .drop span { color: var(--text-faint); }
 
-.toast-wrap { position: fixed; right: 16px; bottom: 48px; display: flex; flex-direction: column; gap: 8px; z-index: 6; }
+.toast-wrap { position: fixed; left: 50%; right: auto; bottom: 48px; transform: translateX(-50%); width: min(360px, calc(100vw - 32px)); display: flex; flex-direction: column; gap: 8px; z-index: 6; pointer-events: none; }
 .toast {
   background: var(--plum-900);
   border: 1px solid var(--line);
@@ -443,9 +443,12 @@ textarea { resize: vertical; }
   display: flex;
   gap: 12px;
   align-items: flex-start;
+  pointer-events: auto;
 }
 .toast.error { color: var(--danger-text); }
+.toast.look { border-color: var(--gold); color: var(--gold-text); }
 .toast button { border: 0; background: transparent; color: var(--danger-text); }
+.toast.look button { color: var(--gold-text); }
 .toast button.toast-action { color: var(--gold-text); font-weight: 600; padding: 0; white-space: nowrap; }
 
 .modal-back { position: fixed; inset: 0; background: var(--scrim); display: grid; place-items: center; z-index: 7; padding: 16px; }

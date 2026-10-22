@@ -8,6 +8,7 @@ import { ReferenceAudio } from '../src/core/audio/ReferenceAudio';
 import { CsvExport } from '../src/core/library/CsvExport';
 import { Importer } from '../src/core/library/Importer';
 import { BeatQuery, BeatValidation } from '../src/core/library/BeatRules';
+import { BeatNames } from '../src/core/library/BeatNames';
 import { BeatRecord, LibraryStore } from '../src/core/library/LibraryStore';
 import { SquareCrop } from '../src/core/library/SquareCrop';
 import NodeID3 from 'node-id3';
@@ -204,6 +205,31 @@ describe('Library', () => {
     const restored = store.restoreTitle(beat.id, beat.title, false);
     expect(restored.title).toBe(beat.title);
     expect(restored.tagsDirty).toBe(false);
+  });
+
+  it('keeps a beat dirty when undo follows an unwritten genre edit', async () => {
+    const dir = tempDir();
+    const filePath = path.join(dir, 'Night Drive.wav');
+    fs.writeFileSync(filePath, PcmDecoder.encodeWav(ReferenceAudio.clicks({ bpm: 90, seconds: 0.2 }), 44100));
+    const store = new LibraryStore(path.join(dir, 'library'));
+    const imported = await Importer.importPaths(store, [filePath]);
+    const beat = imported.imported[0];
+    expect(store.clearTagsDirty(beat.id).tagsDirty).toBe(false);
+    const renamed = store.update(beat.id, { title: 'Velvet Room' });
+    const appliedAt = renamed.updatedAt;
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    const edited = store.update(beat.id, { genre: 'Neo Soul' });
+    expect(edited.genre).toBe('Neo Soul');
+    expect(edited.updatedAt).not.toBe(appliedAt);
+    const plan = BeatNames.restorePlan(
+      [{ id: beat.id, from: beat.title, to: 'Velvet Room', tagsDirty: false, appliedAt }],
+      [{ id: edited.id, title: edited.title, updatedAt: edited.updatedAt }],
+    );
+    expect(plan.restore).toHaveLength(1);
+    const restored = store.restoreTitle(plan.restore[0].id, plan.restore[0].title, plan.restore[0].tagsDirty);
+    expect(restored.title).toBe(beat.title);
+    expect(restored.genre).toBe('Neo Soul');
+    expect(restored.tagsDirty).toBe(true);
   });
 
   it('filters, sorts, validates, and exports CSV', () => {

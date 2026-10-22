@@ -12,4 +12,9 @@ export class ShortcutGuard {
   static spacePlaysBeat(target: Closest): boolean {
     return !target?.closest('table.tracks, button, a, [role="slider"], [role="radio"], summary');
   }
+
+  /** Text fields swallow shortcuts. Checkboxes, radios, and buttons do not. */
+  static typingTarget(target: Closest): boolean {
+    return Boolean(target?.closest('textarea, select, [contenteditable="true"], input:not([type="checkbox"]):not([type="radio"]):not([type="button"]):not([type="range"])'));
+  }
 }

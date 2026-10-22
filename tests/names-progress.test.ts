@@ -49,12 +49,12 @@ describe('BeatNames', () => {
 
   it('restores only rows whose title still equals the applied name', () => {
     const rows = [
-      { id: 'a', from: 'Night Drive', to: 'Velvet Room', tagsDirty: false },
-      { id: 'b', from: 'Gold Hour', to: 'Amber Alley', tagsDirty: true },
+      { id: 'a', from: 'Night Drive', to: 'Velvet Room', tagsDirty: false, appliedAt: 't1' },
+      { id: 'b', from: 'Gold Hour', to: 'Amber Alley', tagsDirty: true, appliedAt: 't2' },
     ];
     const plan = BeatNames.restorePlan(rows, [
-      { id: 'a', title: 'My Edit' },
-      { id: 'b', title: 'Amber Alley' },
+      { id: 'a', title: 'My Edit', updatedAt: 't1' },
+      { id: 'b', title: 'Amber Alley', updatedAt: 't2' },
     ]);
     expect(plan.skipped).toEqual(['My Edit']);
     expect(plan.restore).toEqual([{ id: 'b', title: 'Gold Hour', tagsDirty: true }]);
@@ -181,22 +181,41 @@ describe('ImportProgress', () => {
     expect(ImportProgress.spokenLine(1500 + ImportProgress.lines.length * 3000)).toBeNull();
   });
 
-  it('announces import progress at the start, each quarter, and the end', () => {
+  it('announces at most five stable messages, with no running count', () => {
+    const distinct = (total: number) => {
+      const seen: string[] = [];
+      for (let done = 0; done <= total; done += 1) {
+        const text = ImportProgress.milestone({ phase: 'analyzing', done, total, line: 0, finished: [] });
+        if (!seen.includes(text)) seen.push(text);
+      }
+      return seen;
+    };
+    expect(distinct(16)).toEqual([
+      'Importing 16 files',
+      '25% imported',
+      '50% imported',
+      '75% imported',
+      'Imported 16 of 16',
+    ]);
+    expect(distinct(16).length).toBeLessThanOrEqual(5);
+    expect(distinct(100)).toEqual([
+      'Importing 100 files',
+      '25% imported',
+      '50% imported',
+      '75% imported',
+      'Imported 100 of 100',
+    ]);
+    expect(distinct(100).length).toBeLessThanOrEqual(5);
     const at = (done: number) => ImportProgress.milestone({ phase: 'analyzing', done, total: 16, line: 0, finished: [] });
-    expect(at(0)).toBe('Importing 16 files');
-    expect(at(3)).toBe('Importing 16 files');
-    expect(at(4)).toBe('25% imported, 4 of 16 done');
-    expect(at(7)).toBe('25% imported, 7 of 16 done');
-    expect(at(8)).toBe('50% imported, 8 of 16 done');
-    expect(at(12)).toBe('75% imported, 12 of 16 done');
-    expect(at(16)).toBe('16 of 16 done');
+    expect(at(3)).toBe(at(0));
+    expect(at(7)).toBe(at(4));
   });
 
   it('does not invent progress for an empty run', () => {
     const empty = ImportProgress.start(0);
     expect(ImportProgress.fraction(empty)).toBe(0);
     expect(ImportProgress.countLabel(empty)).toBe('0 of 0');
-    expect(ImportProgress.milestone(empty)).toBe('0 of 0');
+    expect(ImportProgress.milestone(empty)).toBe('');
   });
 
   it('names the files that imported but could not be analyzed', () => {
@@ -204,6 +223,10 @@ describe('ImportProgress', () => {
       "Imported 16 beats. 2 couldn't be analyzed: Broken Bounce.wav, Broken Demo.mp3. Check they play in another app, then choose Re-analyze.",
     );
     expect(UserMessage.stopped(3, 14, 3)).toBe('Stopped after 3 of 14. 3 beats imported.');
+    expect(UserMessage.stopped(1, 14, 1)).toBe('Stopped after 1 of 14. 1 beat imported.');
+    expect(UserMessage.stopped(3, 40, 7, 33)).toBe(
+      'Stopped after 3 of 40. 7 beats imported. 33 still need key and BPM. Select them and choose Re-analyze.',
+    );
     expect(UserMessage.namesApplied).toBe('Titles updated in the library. Files are unchanged until you write tags.');
   });
 });

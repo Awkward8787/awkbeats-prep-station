@@ -39,8 +39,9 @@ type Dialog =
   | { type: 'crop'; src: string; name: string };
 
 type ToastAction = { label: string; run: () => void };
-type ToastItem = { id: number; text: string; tone: 'ok' | 'error'; action?: ToastAction };
-type NameUndoRow = { id: string; from: string; to: string; tagsDirty: boolean };
+type ToastTone = 'ok' | 'error' | 'look';
+type ToastItem = { id: number; text: string; tone: ToastTone; action?: ToastAction };
+type NameUndoRow = { id: string; from: string; to: string; tagsDirty: boolean; appliedAt: string };
 
 export function App() {
   const [beats, setBeats] = useState<Beat[]>([]);
@@ -59,7 +60,7 @@ export function App() {
   const [playing, setPlaying] = useState(false);
   const dragDepth = useRef(0);
 
-  const toast = useCallback((text: string, tone: 'ok' | 'error' = 'ok', options?: { action?: ToastAction; ms?: number }) => {
+  const toast = useCallback((text: string, tone: ToastTone = 'ok', options?: { action?: ToastAction; ms?: number }) => {
     const id = Date.now() + Math.random();
     setToasts((current) => [...current, { id, text, tone, action: options?.action }]);
     if (tone === 'ok') window.setTimeout(() => setToasts((current) => current.filter((item) => item.id !== id)), options?.ms ?? 4000);
@@ -151,7 +152,10 @@ export function App() {
           setJob(snapshot);
         }
         if (stopRef.current) toast(`Stopped after ${snapshot.done} of ${snapshot.total}.`);
-        else if (missed.length) toast(UserMessage.unanalyzed(missed));
+        else if (missed.length) toast(UserMessage.unanalyzed(missed), 'look');
+        if (!stopRef.current && snapshot.done >= snapshot.total) {
+          await new Promise((resolve) => setTimeout(resolve, 400));
+        }
       } finally {
         runGuard.current = false;
         setBusy([]);
@@ -181,6 +185,7 @@ export function App() {
         await refresh();
         let run = runRef.current ?? ImportProgress.begin(files.length);
         const unanalyzed = [...result.unanalyzed];
+        let decodedSoFar = 0;
         for (let slot = 0; slot < result.needsDecode.length; slot += 1) {
           if (stopRef.current) break;
           const index = result.decodeAt[slot] ?? slot;
@@ -193,11 +198,17 @@ export function App() {
           run = ImportProgress.decodeFinish(run, index);
           runRef.current = run;
           setJob(run.snapshot);
+          decodedSoFar += 1;
         }
+        const pendingAnalysis = result.needsDecode.length - decodedSoFar;
         if (stopRef.current || result.cancelled) {
-          toast(UserMessage.stopped(run.snapshot.done, run.snapshot.total, result.imported.length));
+          toast(UserMessage.stopped(run.snapshot.done, run.snapshot.total, result.imported.length, pendingAnalysis));
         } else {
-          toast(UserMessage.imported(result.imported.length, result.duplicates, result.failed.length, unanalyzed));
+          const problems = result.failed.length + unanalyzed.length;
+          toast(UserMessage.imported(result.imported.length, result.duplicates, result.failed.length, unanalyzed), problems ? 'look' : 'ok');
+        }
+        if (!stopRef.current && !result.cancelled && run.snapshot.done >= run.snapshot.total) {
+          await new Promise((resolve) => setTimeout(resolve, 400));
         }
       } finally {
         progressGate.current = -1;
@@ -284,7 +295,7 @@ export function App() {
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
-      const typing = target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT' || target.isContentEditable);
+      const typing = ShortcutGuard.typingTarget(target);
       const mod = event.metaKey || event.ctrlKey;
       if (event.key === 'Escape') {
         KeyPreview.stop();
@@ -414,7 +425,7 @@ export function App() {
       }
       if ('beat' in result && result.beat) {
         replace(result.beat);
-        undo.push({ id: row.id, from: row.from, to: row.to, tagsDirty: beat?.tagsDirty === true });
+        undo.push({ id: row.id, from: row.from, to: row.to, tagsDirty: beat?.tagsDirty === true, appliedAt: result.beat.updatedAt });
       }
     }
     if (undo.length) {
@@ -589,6 +600,7 @@ export function App() {
           <button className="btn btn-ghost" type="button" onClick={() => setDialog({ type: 'shortcuts' })}>Shortcuts</button>
         </span>
       </footer>
+      <span className="sr" role="status" aria-atomic="true">{job ? ImportProgress.milestone(job) : ''}</span>
       {dragOver && beats.length > 0 ? (
         <div className="drop">
           <img src={logoUrl} alt="" />
@@ -598,10 +610,10 @@ export function App() {
       ) : null}
       <div className="toast-wrap">
         {toasts.map((item) => (
-          <div className={item.tone === 'error' ? 'toast error' : 'toast'} key={item.id} role={item.tone === 'error' ? 'alert' : 'status'}>
+          <div className={item.tone === 'ok' ? 'toast' : `toast ${item.tone}`} key={item.id} role={item.tone === 'error' ? 'alert' : 'status'}>
             <span>{item.text}</span>
             {item.action ? <button className="toast-action" type="button" onClick={item.action.run}>{item.action.label}</button> : null}
-            {item.tone === 'error' ? <button type="button" aria-label="Dismiss" onClick={() => setToasts((current) => current.filter((toastItem) => toastItem.id !== item.id))}>×</button> : null}
+            {item.tone !== 'ok' ? <button type="button" aria-label="Dismiss" onClick={() => setToasts((current) => current.filter((toastItem) => toastItem.id !== item.id))}>×</button> : null}
           </div>
         ))}
       </div>

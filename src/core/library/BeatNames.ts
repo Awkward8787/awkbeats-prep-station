@@ -88,8 +88,8 @@ export class BeatNames {
    * A later edit is skipped and reported by its current title.
    */
   static restorePlan(
-    rows: { id: string; from: string; to: string; tagsDirty: boolean }[],
-    current: { id: string; title: string }[],
+    rows: { id: string; from: string; to: string; tagsDirty: boolean; appliedAt: string }[],
+    current: { id: string; title: string; updatedAt: string }[],
   ): { restore: { id: string; title: string; tagsDirty: boolean }[]; skipped: string[] } {
     const restore: { id: string; title: string; tagsDirty: boolean }[] = [];
     const skipped: string[] = [];
@@ -99,7 +99,8 @@ export class BeatNames {
         skipped.push(beat?.title || row.to);
         continue;
       }
-      restore.push({ id: row.id, title: row.from, tagsDirty: row.tagsDirty });
+      const untouched = beat.updatedAt === row.appliedAt;
+      restore.push({ id: row.id, title: row.from, tagsDirty: untouched ? row.tagsDirty : true });
     }
     return { restore, skipped };
   }

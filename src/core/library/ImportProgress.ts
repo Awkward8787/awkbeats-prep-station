@@ -97,16 +97,15 @@ export class ImportProgress {
   }
 
   /**
-   * Screen-reader text. Stable inside a 25% bucket so the live region does not
-   * speak on every file: the start, each quarter, and the end.
+   * Screen-reader text. One string per quarter, with no running count, so a
+   * live region speaks at most five times: the start, 25, 50, 75, and the end.
    */
   static milestone(snapshot: ImportSnapshot): string {
     const { done, total } = snapshot;
-    if (total <= 0) return '0 of 0';
-    if (done >= total) return `${done} of ${total} done`;
+    if (total <= 0) return '';
+    if (done >= total) return `Imported ${total} of ${total}`;
     const quarter = Math.floor((done / total) * 4);
-    if (quarter <= 0) return `Importing ${total} files`;
-    return `${quarter * 25}% imported, ${done} of ${total} done`;
+    return quarter <= 0 ? `Importing ${total} files` : `${quarter * 25}% imported`;
   }
 
   private static finish(snapshot: ImportSnapshot, index: number, phase: ImportPhase): ImportSnapshot {

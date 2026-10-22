@@ -14,8 +14,8 @@ export function ImportBar(props: { snapshot: ImportSnapshot; onStop: () => void 
   const fraction = ImportProgress.fraction(snapshot);
   const count = ImportProgress.countLabel(snapshot);
   const phase = ImportProgress.phaseLabel(snapshot.phase);
-  const line = ImportProgress.spokenLine(elapsed);
-  const milestone = ImportProgress.milestone(snapshot);
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const line = reduce ? (elapsed >= 1500 ? ImportProgress.lines[0] : null) : ImportProgress.spokenLine(elapsed);
 
   return (
     <div className="import-bar">
@@ -35,8 +35,7 @@ export function ImportBar(props: { snapshot: ImportSnapshot; onStop: () => void 
         <div className="import-fill" style={{ width: `${Math.round(fraction * 1000) / 10}%` }} />
       </div>
       {line ? <p className="import-line" aria-hidden="true">{line}</p> : null}
-      <button className="btn btn-ghost" type="button" onClick={props.onStop}>Stop</button>
-      <span className="sr" role="status">{milestone}</span>
+      <button className="btn btn-ghost" type="button" aria-label="Stop import" onClick={props.onStop}>Stop</button>
     </div>
   );
 }

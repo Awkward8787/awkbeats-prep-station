@@ -31,8 +31,10 @@ export class UserMessage {
     return `${names.length} couldn't be analyzed: ${names.join(', ')}. Check they play in another app, then choose Re-analyze.`;
   }
 
-  static stopped(done: number, total: number, imported: number): string {
-    return `Stopped after ${done} of ${total}. ${imported} beats imported.`;
+  static stopped(done: number, total: number, imported: number, pendingAnalysis = 0): string {
+    const noun = imported === 1 ? 'beat' : 'beats';
+    const rest = pendingAnalysis ? ` ${pendingAnalysis} still need key and BPM. Select them and choose Re-analyze.` : '';
+    return `Stopped after ${done} of ${total}. ${imported} ${noun} imported.${rest}`;
   }
 
   static namesRestoredSome(skipped: string[]): string {
