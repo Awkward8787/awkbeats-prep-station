@@ -24,6 +24,7 @@ export function Inspector(props: {
   onDropCover: (file: File) => void;
   onAdjust: () => void;
   onBatch: () => void;
+  onNames: () => void;
 }) {
   const beat = props.beat;
   const [draft, setDraft] = useState<Beat | null>(beat);
@@ -265,7 +266,14 @@ export function Inspector(props: {
           </select>
         </div>
         <Text label="Notes" value={draft.notes} area onChange={(notes) => setDraft({ ...draft, notes })} onBlur={() => save({ notes: draft.notes })} />
-        {props.selectionCount > 1 ? <button className="btn" type="button" onClick={props.onBatch}>Edit {props.selectionCount} selected</button> : null}
+        {props.selectionCount > 1 ? (
+          <div className="catalog-actions">
+            <button className="btn" type="button" onClick={props.onBatch}>Edit {props.selectionCount} selected</button>
+            <button className="btn" type="button" onClick={props.onNames}>Random names</button>
+          </div>
+        ) : props.selectionCount === 1 ? (
+          <button className="btn catalog-name" type="button" onClick={props.onNames}>Random name</button>
+        ) : null}
         <button className="btn btn-danger catalog-remove" type="button" onClick={props.onRemove}>Remove from library</button>
       </div>
       <div className="inspector-footer">

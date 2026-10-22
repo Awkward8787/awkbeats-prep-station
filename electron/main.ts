@@ -6,6 +6,7 @@ import { pathToFileURL } from 'node:url';
 import { ByteRange } from '../src/core/audio/ByteRange';
 import { PcmDecoder } from '../src/core/audio/PcmDecoder';
 import { TrackAnalyzer } from '../src/core/analysis/TrackAnalyzer';
+import { AudioFiles } from '../src/core/library/AudioFiles';
 import { CsvExport } from '../src/core/library/CsvExport';
 import { Importer } from '../src/core/library/Importer';
 import { Theme } from '../src/core/brand/Theme';
@@ -256,9 +257,15 @@ function registerIpc(): void {
     return ids;
   });
   ipcMain.handle('app:site', () => shell.openExternal(SITE));
-  ipcMain.handle('library:import', async (_event, paths: string[]) => {
-    if (!Array.isArray(paths)) return { imported: [], duplicates: 0, failed: [], needsDecode: [] };
-    return Importer.importPaths(store, paths.filter((item) => typeof item === 'string'));
+  ipcMain.handle('library:import', async (event, paths: string[]) => {
+    if (!Array.isArray(paths)) return { imported: [], duplicates: 0, failed: [], needsDecode: [], decodeAt: [] };
+    return Importer.importPaths(store, paths.filter((item) => typeof item === 'string'), (tick) => {
+      if (!event.sender.isDestroyed()) event.sender.send('import-progress', tick);
+    });
+  });
+  ipcMain.handle('library:collect', async (_event, paths: string[]) => {
+    if (!Array.isArray(paths)) return [];
+    return AudioFiles.collect(paths.filter((item) => typeof item === 'string'));
   });
   ipcMain.handle('dialog:audio', async () => {
     const result = await dialog.showOpenDialog({

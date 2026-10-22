@@ -6,6 +6,7 @@ import { TagReader } from '../tags/TagReader';
 import { AudioFiles } from './AudioFiles';
 import { ImageSize } from './ImageSize';
 import { BeatRecord, LibraryStore } from './LibraryStore';
+import type { ImportTick } from './ImportProgress';
 import { CopyrightLine, type Beat, type Settings } from './types';
 
 export type ImportResult = {
@@ -13,30 +14,46 @@ export type ImportResult = {
   duplicates: number;
   failed: { filePath: string; message: string }[];
   needsDecode: string[];
+  /** File index for each id in `needsDecode`, in the same order. */
+  decodeAt: number[];
 };
 
 export class Importer {
-  static async importPaths(store: LibraryStore, inputs: string[]): Promise<ImportResult> {
+  static async importPaths(store: LibraryStore, inputs: string[], onTick?: (tick: ImportTick) => void): Promise<ImportResult> {
     const files = await AudioFiles.collect(inputs);
     const settings = store.getSettings();
     const imported: Beat[] = [];
     const failed: { filePath: string; message: string }[] = [];
     const needsDecode: string[] = [];
+    const decodeAt: number[] = [];
     let duplicates = 0;
-    for (const filePath of files) {
+    const total = files.length;
+    for (let index = 0; index < files.length; index += 1) {
+      const filePath = files[index];
+      onTick?.({ phase: 'loading', index, total });
+      await new Promise((resolve) => setImmediate(resolve));
       if (store.findByPath(filePath)) {
         duplicates += 1;
+        onTick?.({ phase: 'settled', index, total, needsDecode: false });
         continue;
       }
       try {
+        const format = AudioFiles.formatOf(filePath);
+        if (format === 'wav' || format === 'aiff') onTick?.({ phase: 'analyzing', index, total });
         const beat = await this.importOne(store, filePath, settings);
         imported.push(beat);
-        if (beat.format === 'mp3' || beat.format === 'flac') needsDecode.push(beat.id);
+        const decode = beat.format === 'mp3' || beat.format === 'flac';
+        if (decode) {
+          needsDecode.push(beat.id);
+          decodeAt.push(index);
+        }
+        onTick?.({ phase: 'settled', index, total, needsDecode: decode });
       } catch (error) {
         failed.push({ filePath, message: error instanceof Error ? error.message : 'Could not import this file.' });
+        onTick?.({ phase: 'settled', index, total, needsDecode: false });
       }
     }
-    return { imported, duplicates, failed, needsDecode };
+    return { imported, duplicates, failed, needsDecode, decodeAt };
   }
 
   private static async importOne(store: LibraryStore, filePath: string, settings: Settings): Promise<Beat> {

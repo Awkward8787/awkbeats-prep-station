@@ -10,6 +10,10 @@ export class UserMessage {
   static readonly removeTitle = 'Remove from library';
   static readonly removeBody = 'Remove the selected beats from the library? The audio files stay on disk.';
   static readonly analyzeIdle = 'Analyze to measure tempo, key, and the waveform.';
+  static readonly nothingToImport = 'No audio files found.';
+  static readonly namesApplied = 'Names updated. Undo is in the footer until you name another batch.';
+  static readonly namesRestored = 'Names restored.';
+  static readonly namesFailed = 'Not enough unique beat names are left.';
   static readonly cropUpscale = 'This image is smaller than 3000×3000. Exporting at 3000 will upscale it.';
 
   static imported(count: number, duplicates: number, failed: number): string {
