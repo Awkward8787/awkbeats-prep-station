@@ -5,6 +5,7 @@ import { KeyConfidence } from '@core/analysis/KeyConfidence';
 import { UserMessage } from '@core/library/UserMessage';
 import { BEAT_STATUSES, BeatCatalog, BeatStatusLabel, Format, KeyChoice, type Beat, type UserPatch } from '@core/library/types';
 import { HoldDrone, KeyPlay, KeyPreview } from './KeyPreview';
+import { SectionToggle } from './Sidebar';
 
 export function Inspector(props: {
   beat: Beat | null;
@@ -108,7 +109,7 @@ export function Inspector(props: {
             {working.camelot ? <span className="camelot">{working.camelot}</span> : null}
           </div>
           <div className="key-line">
-            <span>{working.name || 'Key not measured'}</span>
+            <span className="key-name">{working.name || 'Key not measured'}</span>
             <KeyPlay name={working.name} />
             <HoldDrone name={working.name} />
           </div>
@@ -235,7 +236,12 @@ export function Inspector(props: {
           <span id="tag-hint" className="faint">Press Enter to add a tag.</span>
         </div>
 
-        <button className="disclosure" type="button" aria-expanded={releaseOpen} onClick={() => setReleaseOpen((value) => !value)}>Release info</button>
+        <SectionToggle
+          label="Release info"
+          count={[draft.copyright, draft.isrc, draft.date, draft.comment].filter((value) => value.trim()).length}
+          open={releaseOpen}
+          onClick={() => setReleaseOpen((value) => !value)}
+        />
         {releaseOpen ? (
           <div className="filter-stack">
             <Text label="Copyright" value={draft.copyright} onChange={(copyright) => setDraft({ ...draft, copyright })} onBlur={() => save({ copyright: draft.copyright })} />
@@ -260,8 +266,10 @@ export function Inspector(props: {
       </div>
       <div className="inspector-footer">
         <button className="btn btn-primary" type="button" onClick={props.onWrite} disabled={beat.missing}>Write tags to file</button>
-        <button className="btn" type="button" onClick={props.onReveal} disabled={beat.missing}>Show in folder</button>
-        <button className="btn btn-danger" type="button" onClick={props.onRemove}>Remove</button>
+        <div className="inspector-actions">
+          <button className="btn" type="button" onClick={props.onReveal} disabled={beat.missing}>Show in folder</button>
+          <button className="btn btn-danger" type="button" onClick={props.onRemove}>Remove</button>
+        </div>
       </div>
     </aside>
   );

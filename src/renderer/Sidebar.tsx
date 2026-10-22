@@ -66,9 +66,7 @@ export function Sidebar(props: {
           </button>
         ))}
       </div>
-      <button className="disclosure" type="button" aria-expanded={open} onClick={() => setOpen((value) => !value)}>
-        Filters{filterCount ? ` (${filterCount})` : ''}
-      </button>
+      <SectionToggle label="Filters" count={filterCount} open={open} onClick={() => setOpen((value) => !value)} />
       {open ? (
         <div className="filter-stack">
           <div className="field">
@@ -155,6 +153,18 @@ export function Sidebar(props: {
       ) : null}
       {filtersActive ? <button className="btn btn-ghost" type="button" onClick={props.onClear}>Clear filters</button> : null}
     </nav>
+  );
+}
+
+export function SectionToggle(props: { label: string; count: number; open: boolean; onClick: () => void }) {
+  return (
+    <button className="section-toggle" type="button" aria-expanded={props.open} onClick={props.onClick}>
+      <svg className="chevron" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+        <path d="M6 3.5 11 8 6 12.5" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+      <span>{props.label}</span>
+      <span className="count">{props.count}</span>
+    </button>
   );
 }
 

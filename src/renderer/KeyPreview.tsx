@@ -142,10 +142,10 @@ export function KeyPlay(props: { name: string | null }) {
         disabled={!name}
         aria-pressed={playing}
         aria-label={label}
-        data-label={name ? label : undefined}
         onClick={() => name && KeyPreview.toggleChord(name)}
       >
         {playing ? <StopIcon /> : <SpeakerIcon />}
+        <span>{playing ? 'Stop' : 'Play chord'}</span>
       </button>
     </span>
   );
@@ -166,7 +166,7 @@ export function HoldDrone(props: { name: string | null }) {
       title={props.name ? 'Hold the root while the beat plays' : 'Key not measured yet'}
       onClick={() => props.name && KeyPreview.toggleHold(props.name)}
     >
-      Hold
+      Hold drone
     </button>
   );
 }
