@@ -7,9 +7,9 @@
 | Project | AwkBeats Prep Station |
 | Document title | Design Brief |
 | Document ID | ABP-DESIGN |
-| Version | 1.1 |
+| Version | 1.3 |
 | Status | Final (as shipped) |
-| Last updated | 2026-10-21 (UTC) |
+| Last updated | 2026-10-22 (UTC) |
 | Author | Cursor Agent, for owner Awkward J |
 | Repo | https://github.com/Awkward8787/awkbeats-prep-station |
 | Branch | `cursor/awkbeats-prep-station-e2e2` |
@@ -41,15 +41,15 @@
 
 ## 1. Brand
 
-Name: AwkBeats. Product: Prep Station. Producer: Awkward J. Site: https://awkbeats.com.
+Name: AwkBeats. Product: Prep Station. The app is for any producer or artist. Site: https://awkbeats.com.
 
 Tagline: none in the product. The top bar subtitle is "Prep Station".
 
-The interface should feel like a studio tool: dark, quiet, gold used for the brand and for the key badge, numbers in a monospace face so BPM columns line up.
+The interface should feel like a studio tool: plum ground, quiet, gold used sparingly. BPM uses IBM Plex Sans with tabular figures. Whole tempos show as integers.
 
 Personality, each as a contrast the UI should hold:
 
-- Precise, not playful. BPM is `140.25`, not "about 140".
+- Precise, not playful. A fractional BPM is `140.25`. A whole BPM is `86`, not `86.00`.
 - Calm, not nightclub. No animated gradients, no strobe on the waveform.
 - Direct, not chatty. Buttons say "Write tags to file", not "Let's save your vibe".
 - Local, not cloudy. No account avatar, no sync icon.
@@ -68,111 +68,90 @@ There is no mascot. The mark is the owner's AwkBeats iOS icon: a gold A with a p
 | Linux icons | `build/icons/<size>x<size>.png` | `linux.icon`. Sizes 16, 24, 32, 48, 64, 128, 256, 512, 1024 |
 | In-app mark | `build/logo.png` 1024×1024, RGBA | Title bar, empty states, about panel. `BrandMark` in `src/renderer/App.tsx` is 36×36. Empty state is 88×88 |
 
-Clear space: keep at least a quarter of the mark's height empty around it in marketing. Do not recolor the gold or the purple, do not stretch it, and do not put the opaque black square in the title bar. The title bar and empty states use the transparent file so the A sits on `#0c0d10`. The retired AJ waveform is not in the repo.
+Clear space: keep at least a quarter of the mark's height empty around it in marketing. Do not recolor the gold or the purple of the logo file, do not stretch it, and do not put the opaque black square in the title bar. The title bar and empty states use the transparent file so the A sits on the plum window (`--plum-950`). The retired AJ waveform is not in the repo. "Powered by AwkBeats" appears once, as a 12px footer button, and once in the About box. It is not in the sidebar and not on the installer.
 
 There is no Open Graph image and no favicon separate from the app icon. Not applicable for a desktop window.
 
 ## 3. Color
 
-Tokens are in `src/renderer/styles.css` on `:root`. Ratios were computed with the WCAG relative-luminance formula on 2026-10-21.
+Tokens live in `src/core/brand/Theme.ts` and are applied to the document root before the first render. `src/renderer/styles.css` only references `var(--…)`. Surfaces are flat plum. Gold is the single accent. The logo facet `#701888` is `--logo-plum` and is decorative only: it is not text, not an icon color, and not a border. Ratios use the WCAG relative-luminance formula.
 
-| Token | Hex | RGB | Role |
-| --- | --- | --- | --- |
-| `--bg` | `#0c0d10` | 12, 13, 16 | Window background |
-| `--bg-rail` | `#101114` | 16, 17, 20 | Top bar, rail, inspector, footer |
-| `--bg-elev` | `#17191e` | 23, 25, 30 | Inputs, analysis card, buttons |
-| `--bg-elev-2` | `#21242b` | 33, 36, 43 | Pills, play button |
-| `--bg-active` | `#2a2418` | 42, 36, 24 | Selected table row |
-| `--line` | `#2c3038` | 44, 48, 56 | Hairline borders |
-| `--line-strong` | `#3c414b` | 60, 65, 75 | Button borders |
-| `--text` | `#f4f0e8` | 244, 240, 232 | Primary text |
-| `--text-dim` | `#b7b1a6` | 183, 177, 166 | Secondary text |
-| `--text-faint` | `#938d85` | 147, 141, 133 | Labels, counts, section titles |
-| `--gold` | `#e4b15a` | 228, 177, 90 | Accent, primary button |
-| `--gold-2` | `#f3d7a4` | 243, 215, 164 | Gold text, focus |
-| `--gold-dim` | `rgba(228,177,90,0.16)` | — | Tag chip fill |
-| `--mint` | `#8ee0b8` | 142, 224, 184 | Status Ready |
-| `--blue` | `#9eb6f0` | 158, 182, 240 | Status Leased |
-| `--coral` | `#f09a86` | 240, 154, 134 | Destructive text |
-| `--violet` | `#d2b0f0` | 210, 176, 240 | Status Sold |
-| `--danger` | `#ff6d6d` | 255, 109, 109 | Reserved danger |
-| `--focus` | `#f3d7a4` | 243, 215, 164 | Focus ring |
-| Table header background | `#12141a` | 18, 20, 26 | Sticky header, not a token |
-| Primary ink | `#1a1408` | 26, 20, 8 | Text on gold buttons |
-| Modal surface | `#14161b` | 20, 22, 27 | Dialogs |
-| Toast surface | `#242017` | 36, 32, 23 | Toasts |
+| Token | Hex | Role |
+| --- | --- | --- |
+| `--plum-950` | `#140b1f` | Window |
+| `--plum-900` | `#1b1029` | Top bar, rail, inspector, footer |
+| `--plum-850` | `#24163a` | Inputs, cards, secondary buttons |
+| `--plum-800` | `#2f1d4a` | Pills and the play button |
+| `--plum-hover` | `#291a40` | Row hover and checkbox-selected rows |
+| `--plum-active` | `#3a2260` | Selected row, always with the gold marker |
+| `--line` | `#3a2a52` | Decorative dividers only |
+| `--line-control` | `#7d68a0` | Input, select, checkbox, and button borders |
+| `--text` | `#f7f2fb` | Primary text |
+| `--text-dim` | `#cdbfe0` | Secondary text |
+| `--text-faint` | `#a896c2` | Labels, counts, hints |
+| `--gold` | `#e4b15a` | Primary fill, Camelot border, waveform, selected marker |
+| `--gold-hover` | `#f0c46e` | Primary button hover |
+| `--gold-text` | `#f3d7a4` | Gold-colored text and the focus ring |
+| `--gold-ink` | `#1f1405` | Text on gold fills |
+| `--status-idea` | `#a896c2` | Idea |
+| `--status-progress` | `#e4b15a` | In progress |
+| `--status-ready` | `#8ee0b8` | Ready |
+| `--status-leased` | `#9eb6f0` | Leased |
+| `--status-sold` | `#f4a6c8` | Sold |
+| `--danger-text` | `#f09a86` | Remove and errors |
+| `--focus` | `#f3d7a4` | Focus ring |
+| `--logo-plum` | `#701888` | Logo only |
 
 | Pair | Ratio | WCAG |
 | --- | --- | --- |
-| `--text` on `--bg` | 17.10 | AAA |
-| `--text-dim` on `--bg` | 9.12 | AAA |
-| `--text-faint` on `--bg` | 5.68 | AA |
-| `--text-faint` on `--bg-rail` | 5.52 | AA |
-| `--text-faint` on `#12141a` | 5.39 | AA |
-| `--text-faint` on `--bg-elev` | 5.14 | AA |
-| `--text-faint` on `--bg-active` | 4.50 | AA |
-| `--gold` on `--bg` | 9.93 | AAA |
-| `--gold-2` on `--bg` | 13.94 | AAA |
-| `#1a1408` on `--gold` | 9.36 | AAA |
-| `--mint` on `--bg` | 12.50 | AAA |
-| `--blue` on `--bg` | 9.63 | AAA |
-| `--coral` on `--bg` | 8.95 | AAA |
-| `--danger` on `--bg` | 7.09 | AAA |
-| `--text` on `--bg-active` | 13.55 | AAA |
-| `--text` on `--bg-elev` | 15.47 | AAA |
+| `--text` on `--plum-950` / `--plum-900` / `--plum-850` / `--plum-active` | 17.36 / 16.52 / 15.23 / 12.07 | AAA |
+| `--text-faint` on `--plum-active` | 4.95 | AA |
+| `--gold` on `--plum-active` | 6.80 | AA |
+| `--gold-text` on `--plum-active` | 9.55 | AAA |
+| `--gold-ink` on `--gold` / `--gold-hover` | 9.25 / 11.05 | AAA |
+| `--line-control` on `--plum-850` / `--plum-900` | 3.49 / 3.78 | AA for control boundaries |
+| `--danger-text` on `--plum-900` | 8.39 | AAA |
 
-Status dots are 8px circles plus the status word. Gold means in progress, mint means ready, blue means leased, violet means sold, faint means idea. The word is always present, so a color-blind producer is not relying on the dot.
+Gold is limited to the logo, the one primary button in the top bar, the Camelot badge, the selected-row marker, the waveform played portion, the focus ring, and the In progress status. Write tags to file is the primary button inside the inspector. Do not put gold on every border, do not use gold text on a mid purple, and do not use white text on gold.
 
-`--text-faint` was `#7e786e` during the first screenshots and measured 4.44:1 on `--bg` and 4.02:1 on `--bg-elev`, which misses AA for small text. It was changed to `#938d85` before the shipping commit. Section titles are 11px uppercase, so they need AA, not large-text AA.
+Status dots are 8px circles plus the status word. The word is always present. Section titles are 12px sentence case in `--text-dim`. Selection is a plum fill plus a 3px gold inset on the first cell. Fill alone is 1.37:1 against the rail and is not enough.
 
 ## 4. Typography
 
-Families, self-hosted from `@fontsource/ibm-plex-sans` and `@fontsource/ibm-plex-mono`, SIL Open Font License 1.1. Weights loaded in `src/renderer/main.tsx`: sans 400, 500, 600; mono 500. Fallback: `'Segoe UI', sans-serif` and `ui-monospace, monospace`.
+Families, self-hosted, SIL Open Font License 1.1. IBM Plex Sans 400, 500, and 600 are the UI face. Space Grotesk 600 is the wordmark and the inspector title only, for continuity with awkbeats.com. Monospace is only inside `kbd` (`ui-monospace`). Fallback: `'Segoe UI', sans-serif`.
 
 | Level | Size | Line height | Tracking | Weight | Where |
 | --- | --- | --- | --- | --- | --- |
-| Body | 14px | 1.45 | 0 | 400 | `body` |
-| Brand name | 13px | — | 0.14em | 600 | `.brand-name` |
-| Subtitle | 11px | — | 0.08em | 400, uppercase | `.brand-sub` |
-| Section label | 11px | — | 0.12em | 600, uppercase | `.section-label`, rail `h2` |
-| Inspector title | 20px | — | 0 | 600 | `.inspector-head h3` |
-| Tempo | 40px | 1 | -0.04em | 500 mono | `.tempo` |
-| Key | 18px | — | 0 | 400 | `.key-line` |
-| Table header | 11px | — | 0.08em | 600, uppercase | `.tracks th` |
-| BPM cells | 14px | — | 0 | 500 mono | `.mono` |
-| Footer | 12px | — | 0 | 400 | `.footer` |
-| Empty title | 22px | — | 0 | 600 | `.empty h2` |
-| Dialog title | 18px | — | 0 | 600 | `.modal h2` |
-| Button | 14px | — | 0 | 400, primary 600 | `.btn` |
+| Caption | 12px | 1.4 | 0 | 600 | Section titles, table headers, footer |
+| Meta | 13px | 1.4 | 0 | 400 | Title subline |
+| Body | 14px | 1.4 | 0 | 400 | Controls and copy |
+| Section | 16px | 1.4 | 0 | 600 | Inspector section titles, sentence case |
+| Inspector title | 20px | 1.15 | 0 | 600 | Space Grotesk, `.inspector-head h3` |
+| Tempo | 32px | 1.15 | 0 | 600 tabular | `.tempo` |
+| Wordmark | 14px | 1.15 | 0.08em | 600 | Space Grotesk, AWKBEATS only |
 
-No responsive type scale. The window does not change font size with viewport.
+Only the wordmark stays uppercase. Section titles and table headers are sentence case. No responsive type scale.
 
 ## 5. Spacing, layout, and grid
 
-The app grid is `60px` top bar, `minmax(0, 1fr)` workspace, `30px` footer. The workspace is `248px`, flexible table, `400px` inspector. Gap in the top bar is 16px. Rail padding is 16px. Table cells are 10px horizontal, row height 44px.
+The app grid is a 60px top bar, a flexible workspace, and a 36px footer. At 1360px and wider the workspace is 248px, a flexible table, and a 380px inspector. At 1359px and below it is `216px minmax(0, 1fr) 340px`, and the genre column is hidden. The table is `table-layout: fixed`. Column widths are checkbox 40, BPM 72, Key 132, Genre 112, Status 120, Date 104. The title column takes the rest and ellipsizes both lines. There is no 980px breakpoint. The window minimum is 1100×700 and the default is 1440×920.
 
-Breakpoint: `max-width: 980px` switches to two columns (see ABP-FLOW). There is no other breakpoint.
-
-Spacing used repeatedly: 6, 8, 10, 12, 14, 16, 18px. There is no 8pt token file beyond the CSS itself. The window minimum is 1100×700.
+Spacing is 4, 8, 12, 16, 24, and 32. Eight between related controls, 16 inside panels, 24 between inspector sections, 32 around the empty state. The search field is at most 480px wide.
 
 ## 6. Shape and depth
 
 | Token | Value | Use |
 | --- | --- | --- |
-| `--radius` | 12px | Analysis card |
-| Inputs, buttons, status rows | 8px | `.btn`, `.status-item`, fields |
-| Camelot badge | 6px | `.camelot` |
-| Pills and chips | 99px | `.pill`, `.chip` |
-| Play | 99px | `.play` |
-| Modal | 16px | `.modal` |
-| Drop overlay | 16px | `.drop` |
-| Cover | 10px | `.cover` |
-| Toast | 10px | `.toast` |
-| `--shadow` | `0 24px 60px rgba(0,0,0,0.45)` | Modal and toast |
-| Focus | 2px solid `--focus`, offset 2px | `:focus-visible` |
-| Borders | 1px `--line` or `--line-strong` | Panels and inputs |
+| Badges and checkboxes | 6px and 4px | `.camelot`, checkbox |
+| Controls | 8px | Inputs, buttons, play |
+| Cards and dialogs | 12px | Analysis card, empty drop zone, modal, toast |
+| Pills and chips | 99px | Status pills and tag chips only |
+| `--shadow` | `0 16px 40px rgb(8 4 14 / 0.45)` | Dialogs and toasts only |
+| Focus | 2px solid `--focus` | `:focus-visible`. Rows use a 2px inset outline. |
+| Control borders | 1px `--line-control` | Inputs, selects, buttons, checkboxes |
+| Dividers | 1px `--line` | Panel edges only |
 
-No stickers. No extra outline brand stroke.
+No gradients, glow, glass, or gold on every hover border. No stickers.
 
 ## 7. Components
 
@@ -180,22 +159,23 @@ Code lives in `src/renderer/styles.css` and the TSX files named below.
 
 | Component | Anatomy | States | File |
 | --- | --- | --- | --- |
-| Brand button | 32px mark, wordmark, subtitle | Default, focus-visible. Hover does not recolor. | `App.tsx` |
-| Search field | Input, sr label | Default, focus | `App.tsx` |
-| Button `.btn` | 8×12 padding, 8px radius | Default, hover (gold border), disabled 0.45 opacity | CSS |
-| Primary `.btn-primary` | Gold fill, ink text, weight 600 | Hover `--gold-2`, disabled | CSS |
-| Ghost `.btn-ghost` | No fill | Hover border | Footer |
-| Danger `.btn-danger` | Coral text | Default | Remove |
-| Status row | Dot, label, count | Default dim, hover and `.active` elevated | `Sidebar.tsx` |
-| Table | Checkbox, title, BPM, key, genre, status, date | Hover `#191c22`, `.active` `--bg-active`, `.missing` faint text | `TrackTable.tsx` |
-| Camelot badge | Mono code, gold border | Static | CSS `.camelot` |
-| Analysis card | Tempo, key, buttons, waveform SVG | BPM lock disables half, double, input | `Inspector.tsx` |
-| Cover well | Square, cover-size background | Empty faint label, or image | `Inspector.tsx` |
-| Chip | Gold dim pill, remove | Default | Tags |
-| Field | Label 12px dim, control | Error text `.error` in coral 12px | Inspector and dialogs |
-| Modal | Scrim `rgba(0,0,0,0.62)`, panel `#14161b`, width min(520px, 100%), wide min(680px, 100%) | Open | `dialogs.tsx` |
-| Toast | Gold border, max-width 360px, bottom right | Timed 4.2s | `App.tsx` |
-| kbd | Mono, gold-2, 1px border, 2px bottom | Static | Shortcuts |
+| Brand lockup | 32px mark, wordmark, subtitle | Not a link. The footer opens the site. | `App.tsx` |
+| Search field | Icon, placeholder, shortcut hint | Max width 480px | `App.tsx` |
+| Button `.btn` | 8×12 padding, 8px radius, `--line-control` border | Hover uses `--plum-hover`, not a gold border | CSS |
+| Primary `.btn-primary` | Gold fill, `--gold-ink` text, weight 600 | Hover `--gold-hover` | Import beats, Write tags to file |
+| Ghost `.btn-ghost` | Includes `.btn` so the border is explicit | Shortcuts | Footer |
+| Danger `.btn-danger` | `--danger-text` outline | Remove from library. Cancel takes initial focus. | Remove |
+| Status row | Dot, label, count | Active uses plum fill and a gold inset | `Sidebar.tsx` |
+| Filters | Disclosure "Filters (n)", collapsed | Hidden when the library is empty | `Sidebar.tsx` |
+| Table | `role="grid"`, roving tabindex | Active row is plum plus a gold marker on the first cell | `TrackTable.tsx` |
+| Camelot badge | Code, gold border, gold text | Static | CSS `.camelot` |
+| Tempo and key | 32px BPM, key once, ½× 1× 2×, lock | Difference line only when working differs from detected | `Inspector.tsx` |
+| Key preview | 32px speaker button, separate AudioContext | Chord about 1.5s. Hold sustains the root. No glow. | `KeyPreview.tsx` |
+| Cover | 120px dashed target when empty, square when set | Image drops stay on this target | `Inspector.tsx` |
+| Inspector footer | Sticky | Write tags, Show in folder, Remove | `Inspector.tsx` |
+| Modal | Scrim, plum panel, radius 12 | Initial focus, Tab trap, focus return, `aria-labelledby` | `dialogs.tsx` |
+| Toast | Radius 12 | Success leaves after 4s. Errors stay until dismissed. | `App.tsx` |
+| kbd | Mono, gold text, control border | One key per `kbd`. macOS uses ⌘, Windows uses Ctrl. | Shortcuts |
 
 ## 8. Iconography and illustration
 
@@ -232,28 +212,31 @@ The ISRC example `US-AWK-26-00001` is a shape sample in the error string. It is 
 
 ## 13. References and inspiration
 
-No external product was copied. The layout (filters, table, inspector) is the usual pattern of a desktop music librarian. What was taken as a principle: dark chrome and a single accent so the Camelot badge and the primary button are the loudest elements. What was not copied: skeuomorphic decks, neon VU meters, purple-on-black "AI" gradients, Inter/system-stack as the only face.
+The layout (filters, table, inspector) is a desktop music librarian. The brand ground is plum, taken from the logo's purple and darkened so text passes WCAG AA. Gold stays the signature accent. What was not copied: gradients, glow, glass, gold text on a mid purple, white text on gold, and the logo purple used as a UI color. Purple-on-black gradients are still out. Flat plum surfaces are the product.
 
-IBM Plex was chosen because the OFL license is compatible with a commercial app and the mono companion matches the sans.
+IBM Plex Sans and Space Grotesk are OFL and are bundled locally.
 
 ## 14. Do and don't
 
 Do:
 
-1. Show BPM with two decimal places.
-2. Show the key name and the Camelot code together.
-3. Keep gold for the brand, the primary button, the Camelot badge, and the waveform.
-4. Write button labels as verbs the producer already uses ("Write tags to file", "Half-time").
+1. Show a whole BPM as an integer (`86`) and a fractional BPM to two places (`140.25`).
+2. Show the key name and the Camelot code together, each value once.
+3. Keep gold for the logo, the primary button, the Camelot badge, the selected-row marker, the waveform, the focus ring, and In progress.
+4. Write button labels as verbs the producer already uses ("Write tags to file", "Import beats").
 5. Leave the audio file where the producer saved it.
+6. Ask for a producer name on first launch. Leave producer, artist, and copyright blank until one is set.
 
 Don't:
 
 1. Don't put developer notes, TODOs, or lorem in the window.
-2. Don't use a light theme for v1. `color-scheme: dark` is set.
+2. Don't use a light theme. `color-scheme: dark` is set.
 3. Don't recolor status dots without updating this table.
-4. Don't add a second accent that competes with gold.
-5. Don't watermark the cover image unless the owner asks. The producer name is a tag, not a stamp.
-6. Don't replace IBM Plex with a font whose license forbids embedding in a sold app.
+4. Don't add a second accent, a gradient, a glow, or gold on every border.
+5. Don't watermark the cover image. The producer name is a tag, not a stamp.
+6. Don't use the logo purple `#701888` as text or a border.
+7. Don't hardcode a person's name as the default producer or copyright.
+8. Don't replace the bundled OFL faces with a font whose license forbids embedding.
 
 ## 15. Screens
 
@@ -263,15 +246,16 @@ The running window was captured during development. Images are pull-request arti
 - Metadata and artwork: cover well, title, producer, genre, mood, tags.
 - Crop dialog: title "Crop cover", export size 3000×3000, Use cover.
 
-Annotated notes: the tempo figure is `.tempo` at 40px mono. The Camelot code sits in `.camelot`. The primary action in the inspector is "Write tags to file". The crop primary action is "Use cover".
+Annotated notes: the tempo figure is `.tempo` at 32px, weight 600, tabular. The Camelot code sits in `.camelot`. The top-bar primary action is "Import beats". The inspector primary action is "Write tags to file". The crop primary action is "Use cover".
 
 ## 16. Glossary
 
 | Term | Meaning |
 | --- | --- |
 | Gold | `#e4b15a`, the only brand accent. |
-| Ink | `#1a1408`, text on gold buttons. |
-| Faint | `#938d85`, metadata labels. |
+| Gold ink | `#1f1405`, text on gold buttons. |
+| Faint | `#a896c2`, metadata labels. |
+| Plum | The surface scale from `#140b1f` to `#3a2260`. |
 
 ## 17. Open questions
 
@@ -286,10 +270,12 @@ Annotated notes: the tempo figure is `.tempo` at 40px mono. The Camelot code sit
 | --- | --- | --- | --- |
 | 2026-10-21 | 1.0 | Brief matched to `styles.css`, including the faint-color contrast fix. | Owner build brief. `#7e786e` failed AA for 11px labels. |
 | 2026-10-21 | 1.1 | The mark is the iOS gold A. Transparent file in the window, opaque file on installers. | Owner supplied the logo. |
+| 2026-10-22 | 1.2 | Window surfaces moved off black toward the logo purple. | Superseded by 1.3. |
+| 2026-10-22 | 1.3 | Plum scale and gold accent in `Theme.ts`. Sentence case. One footer credit. BPM integers. Key confidence under 0.45 asks for an ear check. | UI review. The app is for any producer, so no default name. |
 
 ## 19. Sources
 
 - `src/renderer/styles.css`, `main.tsx`, `App.tsx`, `Inspector.tsx`, `dialogs.tsx`.
 - `build/icon.png`, `build/logo.png`, `build/icon.ico`, `build/icon.icns`, `build/icons/`.
 - Contrast script run locally on 2026-10-21 (WCAG relative luminance).
-- `@fontsource/ibm-plex-sans` and `@fontsource/ibm-plex-mono` license: SIL OFL 1.1.
+- `@fontsource/ibm-plex-sans` and `@fontsource/space-grotesk` license: SIL OFL 1.1.

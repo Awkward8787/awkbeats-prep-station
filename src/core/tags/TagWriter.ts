@@ -26,6 +26,10 @@ export class TagWriter {
       genre: payload.genre,
       comment: { language: 'eng', text: payload.comment || '' },
     };
+    if (payload.producer) {
+      tags.composer = payload.producer;
+      tags.involvedPeopleList = `producer\0${payload.producer}`;
+    }
     if (payload.bpm != null) tags.bpm = payload.bpm.toFixed(2);
     const initial = TagText.initialKey(payload.keyName);
     if (initial) tags.initialKey = initial;
@@ -117,6 +121,7 @@ export class TagWriter {
     const entries: [string, string][] = [
       ['INAM', payload.title],
       ['IART', payload.artist],
+      ['IPRO', payload.producer],
       ['IGNR', payload.genre],
       ['ICMT', payload.comment],
       ['ICRD', payload.date],
@@ -139,6 +144,7 @@ export class TagWriter {
     const pairs: [string, string][] = [
       ['TITLE', payload.title],
       ['ARTIST', payload.artist],
+      ['COMPOSER', payload.producer],
       ['GENRE', payload.genre],
       ['COMMENT', payload.comment],
       ['DATE', payload.date],

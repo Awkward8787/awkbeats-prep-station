@@ -29,7 +29,8 @@ for (const beat of beats) {
   fs.writeFileSync(filePath, PcmDecoder.encodeWav(samples, 44100));
   TagWriter.write(filePath, 'wav', {
     title: beat.file,
-    artist: 'Awkward J',
+    artist: beat.file === 'Night Drive' ? 'Lina Cole' : '',
+    producer: 'Nova Beats',
     genre: beat.genre,
     mood: beat.mood,
     bpm: beat.bpm,
@@ -37,10 +38,9 @@ for (const beat of beats) {
     camelot: '',
     tags: beat.tags,
     comment: beat.notes,
-    copyright: '© 2026 Awkward J',
+    copyright: '© 2026 Nova Beats',
     isrc: '',
     date: '2026-04-02',
-    producer: 'Awkward J',
     artwork: null,
   });
 }
@@ -59,6 +59,7 @@ execFileSync('convert', [
   path.join(audioDir, 'Night Drive.jpg'),
 ]);
 const store = new LibraryStore(userData);
+store.updateSettings({ producerName: 'Nova Beats', producerPromptDismissed: true });
 const result = await Importer.importPaths(store, [audioDir]);
 if (result.failed.length) {
   console.error(result.failed);
@@ -67,8 +68,9 @@ if (result.failed.length) {
 for (const beat of result.imported) {
   const spec = beats.find((item) => item.file === beat.title);
   if (!spec) continue;
-  store.update(beat.id, { status: spec.status, notes: spec.notes, tags: spec.tags, genre: spec.genre, mood: spec.mood });
+  store.update(beat.id, { status: spec.status, notes: spec.notes });
 }
+for (const beat of store.list()) store.clearTagsDirty(beat.id);
 const night = store.list().find((beat) => beat.title === 'Night Drive');
 console.log(JSON.stringify(store.list().map((beat) => ({
   title: beat.title,

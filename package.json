@@ -24,6 +24,7 @@
   "dependencies": {
     "@fontsource/ibm-plex-mono": "^5.2.5",
     "@fontsource/ibm-plex-sans": "^5.2.5",
+    "@fontsource/space-grotesk": "^5.2.5",
     "music-metadata": "^7.14.0",
     "node-id3": "^0.2.6",
     "react": "^18.3.1",

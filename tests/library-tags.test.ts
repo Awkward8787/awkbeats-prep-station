@@ -10,10 +10,12 @@ import { Importer } from '../src/core/library/Importer';
 import { BeatQuery, BeatValidation } from '../src/core/library/BeatRules';
 import { BeatRecord, LibraryStore } from '../src/core/library/LibraryStore';
 import { SquareCrop } from '../src/core/library/SquareCrop';
+import NodeID3 from 'node-id3';
+import { TagCommit } from '../src/core/tags/TagCommit';
 import { TagReader } from '../src/core/tags/TagReader';
 import { TagWriter } from '../src/core/tags/TagWriter';
 import type { TagPayload } from '../src/core/tags/TagTypes';
-import { KeyChoice } from '../src/core/library/types';
+import { KeyChoice, type LibraryFilters } from '../src/core/library/types';
 
 const dirs: string[] = [];
 
@@ -68,6 +70,7 @@ describe('TagWriter', () => {
     const tags = await TagReader.read(filePath);
     expect(tags.title).toBe('Night Drive');
     expect(tags.artist).toBe('Awkward J');
+    expect(tags.producer).toBe('Awkward J');
     expect(tags.genre.toLowerCase()).toContain('trap');
     expect(tags.bpm).toBeCloseTo(140.25, 2);
     expect(tags.keyName).toBe('F# minor');
@@ -193,9 +196,11 @@ describe('Library', () => {
         date: '2026-03-01',
       }),
     );
-    const filters = {
+    const filters: LibraryFilters = {
       search: 'ready dark',
-      status: 'ready' as const,
+      status: 'ready',
+      producer: '',
+      artist: '',
       genre: 'Trap',
       key: '',
       tag: 'dark',
@@ -214,5 +219,136 @@ describe('Library', () => {
     store.batchUpdate([ready.id], { status: 'sold', addTags: ['sold'] });
     expect(store.get(ready.id)?.status).toBe('sold');
     expect(store.get(ready.id)?.tags).toContain('sold');
+    expect(csv.split('\r\n')[0]).toContain('producer');
+  });
+
+  it('saves the producer default, pre-fills new beats, and keeps a per-beat override', async () => {
+    const dir = tempDir();
+    const libraryDir = path.join(dir, 'library');
+    const first = new LibraryStore(libraryDir);
+    expect(first.getSettings().producerName).toBe('');
+    expect(first.getSettings().copyrightTemplate).toBe('© {year} {producer}');
+    expect(first.getSettings().producerPromptDismissed).toBe(false);
+    const barePath = path.join(dir, 'Bare.wav');
+    fs.writeFileSync(barePath, PcmDecoder.encodeWav(ReferenceAudio.clicks({ bpm: 100, seconds: 0.25 }), 44100));
+    const bare = await Importer.importPaths(first, [barePath]);
+    expect(bare.imported[0].producer).toBe('');
+    expect(bare.imported[0].artist).toBe('');
+    expect(bare.imported[0].copyright).toBe('');
+    first.updateSettings({ producerName: 'Nova Beats' });
+    expect(new LibraryStore(libraryDir).getSettings().producerName).toBe('Nova Beats');
+    first.updateSettings({ producerName: '' });
+    expect(new LibraryStore(libraryDir).getSettings().producerName).toBe('');
+    const store = new LibraryStore(libraryDir);
+    store.updateSettings({ producerName: 'Nova Beats' });
+
+    const filePath = path.join(dir, 'Plain.wav');
+    fs.writeFileSync(filePath, PcmDecoder.encodeWav(ReferenceAudio.clicks({ bpm: 100, seconds: 0.25 }), 44100));
+    const imported = await Importer.importPaths(store, [filePath]);
+    expect(imported.failed).toEqual([]);
+    const beat = imported.imported[0];
+    expect(beat.producer).toBe('Nova Beats');
+    expect(beat.artist).toBe('');
+    expect(beat.copyright).toBe(`© ${new Date().getFullYear()} Nova Beats`);
+    expect(store.clearTagsDirty(beat.id).tagsDirty).toBe(false);
+    store.update(beat.id, { notes: 'Hold' });
+    expect(store.get(beat.id)?.tagsDirty).toBe(false);
+    store.update(beat.id, { status: 'ready' });
+    expect(store.get(beat.id)?.tagsDirty).toBe(false);
+
+    store.update(beat.id, { producer: 'Other Name', artist: 'Lina Cole' });
+    const saved = new LibraryStore(libraryDir).get(beat.id)!;
+    expect(saved.producer).toBe('Other Name');
+    expect(saved.artist).toBe('Lina Cole');
+    expect(saved.tagsDirty).toBe(true);
+    expect(store.clearTagsDirty(beat.id).tagsDirty).toBe(false);
+    const payloadFromBeat = TagCommit.fromBeat(saved, store.getSettings(), store);
+    expect(payloadFromBeat.producer).toBe('Other Name');
+    expect(payloadFromBeat.artist).toBe('Lina Cole');
+
+    const filters: LibraryFilters = {
+      search: 'lina',
+      status: 'all',
+      producer: 'other',
+      artist: 'lina',
+      genre: '',
+      key: '',
+      tag: '',
+      bpmMin: null,
+      bpmMax: null,
+      dateFrom: '',
+      dateTo: '',
+    };
+    expect(BeatQuery.match(saved, filters)).toBe(true);
+    expect(BeatQuery.match(saved, { ...filters, producer: 'nova' })).toBe(false);
+    expect(BeatQuery.match(saved, { ...filters, search: 'nova beats' })).toBe(false);
+    const csv = CsvExport.render([saved]);
+    expect(csv).toContain('Other Name');
+    expect(csv).toContain('Lina Cole');
+    const catalog = JSON.parse(fs.readFileSync(path.join(libraryDir, 'library.json'), 'utf8')) as {
+      settings: { producerName: string };
+      beats: { producer: string; artist: string }[];
+    };
+    expect(catalog.settings.producerName).toBe('Nova Beats');
+    const edited = catalog.beats.find((item) => item.artist === 'Lina Cole');
+    expect(edited?.producer).toBe('Other Name');
+    expect(edited?.artist).toBe('Lina Cole');
+  });
+});
+
+describe('producer and artist tags', () => {
+  const distinct = (): TagPayload => ({
+    ...payload(),
+    artist: 'Lina Cole',
+    producer: 'Nova Beats',
+  });
+
+  async function roundTrip(filePath: string, format: 'mp3' | 'wav' | 'aiff' | 'flac'): Promise<void> {
+    TagWriter.write(filePath, format, distinct());
+    const tags = await TagReader.read(filePath);
+    expect(tags.artist).toBe('Lina Cole');
+    expect(tags.producer).toBe('Nova Beats');
+  }
+
+  it('writes artist to TPE1 and producer to TCOM, TIPL, and TXXX:PRODUCER', async () => {
+    const dir = tempDir();
+    const filePath = path.join(dir, 'beat.mp3');
+    const frame = Buffer.alloc(417);
+    frame[0] = 0xff;
+    frame[1] = 0xfb;
+    frame[2] = 0x90;
+    fs.writeFileSync(filePath, frame);
+    await roundTrip(filePath, 'mp3');
+    const id3 = NodeID3.read(filePath);
+    expect(id3.artist).toBe('Lina Cole');
+    expect(id3.composer).toBe('Nova Beats');
+    expect(String(id3.involvedPeopleList)).toContain('producer');
+    expect(String(id3.involvedPeopleList)).toContain('Nova Beats');
+    const custom = Array.isArray(id3.userDefinedText) ? id3.userDefinedText : id3.userDefinedText ? [id3.userDefinedText] : [];
+    expect(custom.some((item) => item.description === 'PRODUCER' && item.value === 'Nova Beats')).toBe(true);
+  });
+
+  it('reads artist and producer back from WAV, AIFF, and FLAC', async () => {
+    const dir = tempDir();
+    const wav = path.join(dir, 'beat.wav');
+    fs.writeFileSync(wav, PcmDecoder.encodeWav(ReferenceAudio.clicks({ bpm: 100, seconds: 0.2 }), 44100));
+    await roundTrip(wav, 'wav');
+    const info = fs.readFileSync(wav).toString('latin1');
+    expect(info).toContain('IART');
+    expect(info).toContain('Lina Cole');
+    expect(info).toContain('IPRO');
+    expect(info).toContain('Nova Beats');
+
+    const aiff = path.join(dir, 'beat.aiff');
+    fs.writeFileSync(aiff, PcmDecoder.encodeAiff(ReferenceAudio.clicks({ bpm: 100, seconds: 0.2 }), 44100));
+    await roundTrip(aiff, 'aiff');
+
+    const flac = path.join(dir, 'beat.flac');
+    fs.copyFileSync(path.join(__dirname, 'fixtures', 'silence.flac'), flac);
+    await roundTrip(flac, 'flac');
+    const comments = fs.readFileSync(flac).toString('utf8');
+    expect(comments).toContain('ARTIST=Lina Cole');
+    expect(comments).toContain('PRODUCER=Nova Beats');
+    expect(comments).toContain('COMPOSER=Nova Beats');
   });
 });

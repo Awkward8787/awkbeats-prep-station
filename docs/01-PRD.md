@@ -7,9 +7,9 @@
 | Project | AwkBeats Prep Station |
 | Document title | Product Requirements Document |
 | Document ID | ABP-PRD |
-| Version | 1.1 |
+| Version | 1.2 |
 | Status | Final (as shipped) |
-| Last updated | 2026-10-21 (UTC) |
+| Last updated | 2026-10-22 (UTC) |
 | Author | Cursor Agent, for owner Awkward J |
 | Repo | https://github.com/Awkward8787/awkbeats-prep-station |
 | Branch | `cursor/awkbeats-prep-station-e2e2` |
@@ -40,7 +40,7 @@
 
 ## 1. Summary
 
-AwkBeats Prep Station is a local desktop application for the producer Awkward J, and for other producers who prepare beats the same way. It keeps a searchable library of WAV, MP3, AIFF, and FLAC files, measures each beat's tempo to 0.01 BPM and its musical key in both standard notation and Camelot code, and writes title, producer, genre, mood, tempo, key, tags, comments, copyright, optional ISRC, date, and cover art into the file's real tags. Version 1.0.0 ships as an unsigned macOS `.dmg` and a Windows `.exe`. Analysis and the catalog stay on the machine. Nothing in the app phones home.
+AwkBeats Prep Station is a local desktop application for any producer who prepares beats. The brand is AwkBeats. The producer name is a setting, not a name built into the app. It keeps a searchable library of WAV, MP3, AIFF, and FLAC files, measures each beat's tempo to 0.01 BPM and its musical key in both standard notation and Camelot code, and writes title, producer, genre, mood, tempo, key, tags, comments, copyright, optional ISRC, date, and cover art into the file's real tags. Version 1.0.0 ships as an unsigned macOS `.dmg` and a Windows `.exe`. Analysis and the catalog stay on the machine. Nothing in the app phones home.
 
 ## 2. Background and problem
 
@@ -92,7 +92,7 @@ Role: beatmaker selling or leasing instrumentals. Technical comfort: high inside
 
 ### Secondary — another producer using the same tool
 
-Same needs. Default producer name and copyright template are settings, so the app is not hard-locked to one artist string, but the brand chrome says AwkBeats.
+Same needs. Producer name starts empty and is saved in Settings. Artist name is a separate field on each beat and starts empty. The brand chrome says AwkBeats.
 
 ### Not a persona in v1
 
@@ -150,11 +150,11 @@ As a producer, I want a status, notes, batch edits, and a CSV so that I can run 
 | --- | --- | --- | --- | --- | --- |
 | FR-001 | Import WAV, MP3, AIFF/AIF, FLAC from files, folders, or drag and drop. Skip dotfiles. Reject files over 2 GiB. | Must | Shipped | US-001 | `src/core/library/AudioFiles.ts`, `Importer.ts`, `src/renderer/App.tsx` |
 | FR-002 | Skip a path that is already in the library. | Must | Shipped | US-001 | `Importer.importPaths`, `LibraryStore.findByPath` |
-| FR-003 | Search, sort, and filter by key, BPM range, genre, tag, date, and status. | Must | Shipped | US-002 | `BeatQuery`, `Sidebar.tsx`, `TrackTable.tsx` |
+| FR-003 | Search, sort, and filter by producer, artist, key, BPM range, genre, tag, date, and status. | Must | Shipped | US-002 | `BeatQuery`, `Sidebar.tsx`, `TrackTable.tsx` |
 | FR-004 | Detect musical key as a name and a Camelot code, offline. | Must | Shipped | US-003 | `KeyDetector.ts`, `Camelot.ts` |
 | FR-005 | Detect BPM to 0.01, offline, with half-time and double-time. | Must | Shipped | US-003 | `BpmDetector.ts`, `BpmMath.ts` |
 | FR-006 | Hand override and lock for BPM and key. Locks survive re-analysis. | Must | Shipped | US-003 | `LibraryStore.applyAnalysis`, `Inspector.tsx` |
-| FR-007 | Edit title, artist/producer, genre, mood, tags, comment, copyright, ISRC, date, status, notes. | Must | Shipped | US-004, US-006 | `Inspector.tsx`, `BeatValidation` |
+| FR-007 | Edit title, producer name, artist name, genre, mood, tags, comment, copyright, ISRC, date, status, notes. | Must | Shipped | US-004, US-006 | `Inspector.tsx`, `BeatValidation` |
 | FR-008 | Write those fields into ID3v2 (MP3), RIFF INFO + ID3 (WAV), ID3 (AIFF), Vorbis comments (FLAC). | Must | Shipped | US-004 | `TagWriter.ts` |
 | FR-009 | Import, crop to square, export at 1500 or 3000, embed artwork. | Must | Shipped | US-005 | `SquareCrop.ts`, `dialogs.tsx` CropDialog, `TagWriter` |
 | FR-010 | Optional producer custom tag (`PRODUCER`). No burned-in image watermark. | Could | Shipped as text tag | US-004 | `TagWriter.id3Tags`, Vorbis `PRODUCER` |
@@ -163,7 +163,7 @@ As a producer, I want a status, notes, batch edits, and a CSV so that I can run 
 | FR-013 | Batch edit and batch analyze. | Must | Shipped | US-006 | `LibraryStore.batchUpdate`, `App.analyzeIds` |
 | FR-014 | Playback of the selected beat. | Should | Shipped | US-002 | `beat://audio/<id>`, `Inspector.tsx` |
 | FR-015 | Keyboard shortcuts for search, import, export, analyze, write, remove, status, playback. | Should | Shipped | US-002 | `App.tsx`, `dialogs.tsx` |
-| FR-016 | Settings: default producer, copyright template with `{year}`, default cover export size. | Should | Shipped | US-001 | `DEFAULT_SETTINGS` |
+| FR-016 | Settings: producer name (saved locally, pre-fills new beats), copyright template with `{year}` and `{producer}`, default cover export size. | Should | Shipped | US-001 | `DEFAULT_SETTINGS` |
 | FR-017 | Show the audio file in the OS folder. | Should | Shipped | US-004 | `beat:reveal` |
 | FR-018 | Sidecar JPEG (`Beat.jpg` or `Beat.jpeg`) imported as cover. | Should | Shipped | US-001 | `Importer.sidecarJpeg` |
 | FR-019 | Remove from library without deleting the audio file. | Must | Shipped | US-006 | `LibraryStore.remove` |
@@ -224,7 +224,7 @@ Tone: short, studio-floor, no jokes, no "lorem", no TODO, no "click here". The e
 
 ## 10. Monetization
 
-The build brief says the app may be sold. Version 1.0.0 has no price, no payment provider, no tax handling, and no refund flow. Who would receive funds is UNCONFIRMED because the legal entity is UNCONFIRMED. The in-app copyright default is `© {year} Awkward J`, written onto beats, which is not a statement of the application's sale terms.
+The build brief says the app may be sold. Version 1.0.0 has no price, no payment provider, no tax handling, and no refund flow. Who would receive funds is UNCONFIRMED because the legal entity is UNCONFIRMED. The in-app copyright template is `© {year} {producer}`. It is written only when a producer name is set, and it is not a statement of the application's sale terms.
 
 Status of payments: not applicable in this build.
 
@@ -305,6 +305,7 @@ Everything in the functional table marked Shipped: local library, analysis, tags
 | --- | --- | --- | --- |
 | 2026-10-21 | 1.0 | Initial PRD reconciled to the shipped 1.0.0 tree. | Owner build brief. |
 | 2026-10-21 | 1.1 | Installer and in-app marks are the iOS logo. `build/icon.svg` is gone. | Owner supplied `icon.png` and the transparent logo. |
+| 2026-10-22 | 1.2 | Producer name and artist name are separate. The producer default is a saved setting and starts empty. | The app is for any producer. |
 
 ## 18. Sources
 

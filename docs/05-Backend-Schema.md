@@ -7,9 +7,9 @@
 | Project | AwkBeats Prep Station |
 | Document title | Backend and Data Schema |
 | Document ID | ABP-DATA |
-| Version | 1.0 |
+| Version | 1.2 |
 | Status | Final (as shipped) |
-| Last updated | 2026-10-21 (UTC) |
+| Last updated | 2026-10-22 (UTC) |
 | Author | Cursor Agent, for owner Awkward J |
 | Repo | https://github.com/Awkward8787/awkbeats-prep-station |
 | Branch | `cursor/awkbeats-prep-station-e2e2` |
@@ -81,6 +81,7 @@ erDiagram
     string producerName
     string copyrightTemplate
     int artworkExportSize
+    boolean producerPromptDismissed
   }
   ARTWORK {
     string file
@@ -107,9 +108,10 @@ Caption: One library file holds many beats and one settings object. Artwork is a
 
 | Field | Type | Nullable | Default | Constraints | Description | Example | PII |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| producerName | string | no | Awkward J | none | Written as artist fallback and as PRODUCER tag | Awkward J | name |
-| copyrightTemplate | string | no | © {year} Awkward J | `{year}` replaced at import | Default copyright | © 2026 Awkward J | no |
+| producerName | string | no | empty | max 200 | Saved on this computer. Pre-fills `Beat.producer` on import when the file has no producer tag. A beat can override it. Empty is a valid saved value. | Nova Beats | name |
+| copyrightTemplate | string | no | © {year} {producer} | `{year}` and `{producer}` replaced at import | Used only when the file has no copyright tag and the producer name is not empty. An empty producer leaves copyright blank. | © 2026 Nova Beats | no |
 | artworkExportSize | 1500 or 3000 | no | 3000 | only those two accepted in `updateSettings` | Default crop export | 3000 | no |
+| producerPromptDismissed | boolean | no | false | boolean | True after the first-launch producer sheet is saved or dismissed. | false | no |
 
 ### Beat
 
@@ -125,12 +127,13 @@ Implemented in `src/core/library/types.ts`. `id` is `crypto.randomUUID()` from `
 | durationSec | number | yes | null | seconds | Duration | 8.0 | no |
 | sampleRate | number | yes | null | Hz | Rate | 44100 | no |
 | title | string | no | tag or basename | — | Title | Night Drive | no |
-| artist | string | no | tag or producerName | — | Producer / artist | Awkward J | name |
+| producer | string | no | file tag, else producerName | max 200 on update | Per-beat producer. Empty when neither the file nor the setting has a name. | Nova Beats | name |
+| artist | string | no | file tag, else empty | max 200 on update | Performing artist. Not copied from the producer name. | Lina Cole | name |
 | genre | string | no | "" | free text, suggestions in `BeatCatalog.genres` | Genre | Trap | no |
 | mood | string | no | "" | suggestions in `BeatCatalog.moods` | Mood | Dark | no |
 | tags | string[] | no | [] | max 24, each max 32, case-insensitive unique | Tags | night, keys | no |
 | comment | string | no | "" | max 4000 on update | Comment | — | could be personal |
-| copyright | string | no | template | max 400 on update | Copyright line | © 2026 Awkward J | no |
+| copyright | string | no | blank, or template when a producer name exists | max 400 on update | Copyright line. Blank when the file has no copyright tag and the producer name is empty. | © 2026 Nova Beats | no |
 | isrc | string | no | "" | empty or 12-char canonical | ISRC | USAWK2600001 | no |
 | date | string | no | tag or mtime | stored as YYYY-MM-DD slice | Date | 2026-10-21 | no |
 | bpmDetected | number | yes | null | 0.01 resolution when set | Detector BPM | 140.25 | no |
@@ -145,7 +148,8 @@ Implemented in `src/core/library/types.ts`. `id` is `crypto.randomUUID()` from `
 | keyLocked | boolean | no | false | — | Lock | false | no |
 | keyConfidence | number | yes | null | 0–1 | Gap score | 1 | no |
 | status | BeatStatus | no | idea | idea, in_progress, ready, leased, sold | Catalog status | ready | no |
-| notes | string | no | "" | — | Internal notes, not written to the audio tag | Hold for Friday | could be personal |
+| notes | string | no | "" | — | Internal notes, not written to the audio tag. Editing notes does not set `tagsDirty`. | Hold for Friday | could be personal |
+| tagsDirty | boolean | no | false | missing values load as false | True after a change that Write tags to file would store in the audio. Cleared after a successful write. Status-only edits do not set it. | false | no |
 | artworkFile | string | yes | null | filename only | Cover filename | `<id>.jpg` | no |
 | artworkWidth | number | yes | null | pixels | Width | 1800 | no |
 | artworkHeight | number | yes | null | pixels | Height | 2400 | no |
@@ -168,12 +172,13 @@ Key names come from `Camelot.roots`: C, C#, D, D#, E, F, F#, G, G#, A, A#, B, pl
 
 ### Tag payload written into audio
 
-`TagCommit.fromBeat` maps the working BPM and working key, plus `settings.producerName` as `producer`. ID3 frames (`TagWriter.id3Tags`):
+`TagCommit.fromBeat` maps the working BPM and working key. `producer` is `beat.producer` (the per-beat value, which import pre-filled from settings). `artist` is `beat.artist`. ID3 frames (`TagWriter.id3Tags`), written into MP3 and into the ID3 chunk of WAV and AIFF:
 
 | App field | ID3 | Vorbis | Notes |
 | --- | --- | --- | --- |
 | title | TIT2 | TITLE | |
-| artist | TPE1 | ARTIST | |
+| artist | TPE1 | ARTIST | Performing artist. Empty stays empty. |
+| producer | TCOM, TIPL (`producer` + NUL + name), TXXX PRODUCER | COMPOSER and PRODUCER | Per-beat producer name |
 | genre | TCON | GENRE | |
 | comment | COMM eng | COMMENT | |
 | bpm | TBPM with two decimals | BPM | |
@@ -184,16 +189,19 @@ Key names come from `Camelot.roots`: C, C#, D, D#, E, F, F#, G, G#, A, A#, B, pl
 | copyright | TCOP if it can be made to start with a year, plus TXXX COPYRIGHT | COPYRIGHT | `TagText.copyrightFrame` |
 | isrc | TSRC | ISRC | |
 | date | TDRL and TYER when the first four chars are a year | DATE | |
-| producer | TXXX PRODUCER | PRODUCER | from settings, not the beat artist field |
 | artwork | APIC type 3 | PICTURE type 3 | |
 
-WAV also writes RIFF LIST/INFO (INAM, IART, IGNR, ICMT, ICRD, ICOP). Existing INFO and `id3 ` chunks are replaced. Other RIFF chunks, including `data`, stay. AIFF writes NAME, AUTH, ANNO, and ID3, replacing older copies of those chunks.
+WAV also writes RIFF LIST/INFO: INAM title, IART artist, IPRO producer, IGNR, ICMT, ICRD, ICOP, ISBJ. IPRO is the INFO field this app uses for the producer name. The same WAV also gets an ID3 chunk with TPE1, TCOM, TIPL, and TXXX:PRODUCER. Existing INFO and `id3 ` chunks are replaced. Other RIFF chunks, including `data`, stay. AIFF writes NAME, AUTH (artist), ANNO, and the same ID3 chunk. FLAC Vorbis comments use ARTIST, PRODUCER, and COMPOSER.
+
+M4A / MP4 is not an import or export format, so no `©ART` or iTunes producer atom is written.
+
+CSV and the library JSON both store the two names. `library.json` is the catalog JSON: each beat has `producer` and `artist`, and `settings.producerName` is the default. There is no second JSON export.
 
 FLAC keeps STREAMINFO and audio frames, drops old VORBIS_COMMENT (type 4), PICTURE (type 6), and PADDING (type 1), then writes a new comment, an optional picture, and 256 bytes of padding. Vendor string: `AwkBeats Prep Station`.
 
 ### CSV columns
 
-`CsvExport.headers`: id, title, artist, file_name, file_path, format, duration_sec, bpm, bpm_detected, bpm_scale, bpm_override, bpm_locked, key, camelot, key_detected, camelot_detected, key_locked, key_confidence, genre, mood, tags (joined with `|`), status, notes, comment, copyright, isrc, date, analyzed_at, imported_at, updated_at. RFC 4180 quoting.
+`CsvExport.headers`: id, title, producer, artist, file_name, file_path, format, duration_sec, bpm, bpm_detected, bpm_scale, bpm_override, bpm_locked, key, camelot, key_detected, camelot_detected, key_locked, key_confidence, genre, mood, tags (joined with `|`), status, notes, comment, copyright, isrc, date, analyzed_at, imported_at, updated_at. RFC 4180 quoting.
 
 ## 4. Client-side storage
 
@@ -300,6 +308,7 @@ No encryption at rest beyond what the operating system does for the user account
 | Date | Version | Change | Why |
 | --- | --- | --- | --- |
 | 2026-10-21 | 1.0 | Schema for library version 1 and the IPC list. | Owner build brief. |
+| 2026-10-22 | 1.2 | Producer and artist are separate beat fields. The producer default starts empty. | The app is for any producer. |
 
 ## 16. Sources
 

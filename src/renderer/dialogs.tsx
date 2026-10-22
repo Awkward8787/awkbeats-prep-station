@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { SquareCrop } from '@core/library/SquareCrop';
 import { UserMessage } from '@core/library/UserMessage';
 import { BEAT_STATUSES, BeatCatalog, BeatStatusLabel, type BatchPatch, type Settings } from '@core/library/types';
@@ -10,13 +10,14 @@ export function SettingsDialog(props: { settings: Settings; onClose: () => void;
   return (
     <Modal title="Settings" onClose={props.onClose}>
       <div className="field">
-        <label htmlFor="producer-name">Default producer</label>
+        <label htmlFor="producer-name">Producer name</label>
         <input id="producer-name" value={producerName} onChange={(event) => setProducerName(event.target.value)} />
+        <span className="faint">Saved on this computer and filled in on every new beat. A beat can use a different producer name.</span>
       </div>
       <div className="field">
         <label htmlFor="copyright-template">Copyright template</label>
         <input id="copyright-template" value={copyrightTemplate} onChange={(event) => setCopyrightTemplate(event.target.value)} />
-        <span className="faint">{'{year}'} is replaced when a beat is imported.</span>
+        <span className="faint">{'{year}'} and {'{producer}'} are replaced when a beat is imported. If the producer name is empty, the copyright line stays blank.</span>
       </div>
       <div className="field">
         <label htmlFor="art-size">Default cover export</label>
@@ -34,38 +35,58 @@ export function SettingsDialog(props: { settings: Settings; onClose: () => void;
 }
 
 export function ShortcutsDialog(props: { onClose: () => void }) {
-  const rows: [string, string][] = [
-    ['Search', 'Ctrl/⌘ F'],
-    ['Import files', 'Ctrl/⌘ I'],
-    ['Import folder', 'Ctrl/⌘ Shift I'],
-    ['Export CSV', 'Ctrl/⌘ E'],
-    ['Analyze', 'Ctrl/⌘ Enter'],
-    ['Write tags', 'Ctrl/⌘ S'],
-    ['Remove from library', 'Ctrl/⌘ Backspace'],
-    ['Move selection', '↑ ↓'],
-    ['Play / pause', 'Space'],
-    ['Set status', '1–5'],
-    ['Settings', 'Ctrl/⌘ ,'],
-    ['This list', 'Ctrl/⌘ /'],
+  const mac = window.prep.platform === 'darwin';
+  const mod = mac ? '⌘' : 'Ctrl';
+  const rows: { label: string; keys: string[] }[] = [
+    { label: 'Search', keys: [mod, 'F'] },
+    { label: 'Import beats', keys: [mod, 'I'] },
+    { label: 'Import a folder', keys: [mod, 'Shift', 'I'] },
+    { label: 'Export catalog', keys: [mod, 'E'] },
+    { label: 'Re-analyze', keys: [mod, 'Enter'] },
+    { label: 'Write tags', keys: [mod, 'S'] },
+    { label: 'Play reference chord', keys: ['K'] },
+    { label: 'Remove from library', keys: [mod, 'Backspace'] },
+    { label: 'Move selection', keys: ['↑', '↓'] },
+    { label: 'Play or pause', keys: ['Space'] },
+    { label: 'Set status', keys: ['1', '5'] },
+    { label: 'Settings', keys: [mod, ','] },
+    { label: 'This list', keys: [mod, '/'] },
   ];
   return (
     <Modal title="Keyboard shortcuts" onClose={props.onClose}>
       <div className="shortcut-list">
-        {rows.map(([label, keys]) => (
-          <FragmentRow key={label} label={label} keys={keys} />
+        {rows.map((row) => (
+          <FragmentRow key={row.label} label={row.label} keys={row.keys} />
         ))}
       </div>
-      <div className="modal-actions"><button className="btn btn-primary" type="button" onClick={props.onClose}>Close</button></div>
+      <div className="modal-actions"><button className="btn" type="button" onClick={props.onClose}>Close</button></div>
     </Modal>
   );
 }
 
-function FragmentRow(props: { label: string; keys: string }) {
+function FragmentRow(props: { label: string; keys: string[] }) {
   return (
     <>
       <span>{props.label}</span>
-      <kbd>{props.keys}</kbd>
+      <span className="keys">{props.keys.map((key) => <kbd key={key}>{key}</kbd>)}</span>
     </>
+  );
+}
+
+export function ProducerDialog(props: { onSave: (name: string) => void; onLater: () => void }) {
+  const [name, setName] = useState('');
+  return (
+    <Modal title="What name goes on your beats?" onClose={props.onLater}>
+      <div className="field">
+        <label htmlFor="first-producer">Producer name</label>
+        <input id="first-producer" value={name} onChange={(event) => setName(event.target.value)} />
+        <span className="faint">Filled in on new beats. You can change it on any beat.</span>
+      </div>
+      <div className="modal-actions">
+        <button className="btn" type="button" onClick={props.onLater}>Later</button>
+        <button className="btn btn-primary" type="button" disabled={!name.trim()} onClick={() => props.onSave(name.trim())}>Save</button>
+      </div>
+    </Modal>
   );
 }
 
@@ -73,6 +94,7 @@ export function BatchDialog(props: { count: number; onClose: () => void; onApply
   const [status, setStatus] = useState('');
   const [genre, setGenre] = useState('');
   const [mood, setMood] = useState('');
+  const [producer, setProducer] = useState('');
   const [artist, setArtist] = useState('');
   const [tags, setTags] = useState('');
   const [copyright, setCopyright] = useState('');
@@ -88,7 +110,8 @@ export function BatchDialog(props: { count: number; onClose: () => void; onApply
       </div>
       <div className="field"><label htmlFor="batch-genre">Genre</label><input id="batch-genre" list="genre-list" value={genre} onChange={(event) => setGenre(event.target.value)} /></div>
       <div className="field"><label htmlFor="batch-mood">Mood</label><input id="batch-mood" list="mood-list" value={mood} onChange={(event) => setMood(event.target.value)} /></div>
-      <div className="field"><label htmlFor="batch-artist">Producer / artist</label><input id="batch-artist" value={artist} onChange={(event) => setArtist(event.target.value)} /></div>
+      <div className="field"><label htmlFor="batch-producer">Producer name</label><input id="batch-producer" value={producer} onChange={(event) => setProducer(event.target.value)} /></div>
+      <div className="field"><label htmlFor="batch-artist">Artist name</label><input id="batch-artist" value={artist} onChange={(event) => setArtist(event.target.value)} /></div>
       <div className="field"><label htmlFor="batch-tags">Add tags</label><input id="batch-tags" value={tags} onChange={(event) => setTags(event.target.value)} /></div>
       <div className="field"><label htmlFor="batch-copy">Copyright</label><input id="batch-copy" value={copyright} onChange={(event) => setCopyright(event.target.value)} /></div>
       <datalist id="genre-list">{BeatCatalog.genres.map((item) => <option key={item} value={item} />)}</datalist>
@@ -99,6 +122,7 @@ export function BatchDialog(props: { count: number; onClose: () => void; onApply
           if (status) patch.status = status as BatchPatch['status'];
           if (genre.trim()) patch.genre = genre.trim();
           if (mood.trim()) patch.mood = mood.trim();
+          if (producer.trim()) patch.producer = producer.trim();
           if (artist.trim()) patch.artist = artist.trim();
           if (copyright.trim()) patch.copyright = copyright.trim();
           if (tags.trim()) patch.addTags = tags.split(',').map((tag) => tag.trim()).filter(Boolean);
@@ -109,13 +133,13 @@ export function BatchDialog(props: { count: number; onClose: () => void; onApply
   );
 }
 
-export function ConfirmDialog(props: { title: string; body: string; confirm: string; onClose: () => void; onConfirm: () => void }) {
+export function ConfirmDialog(props: { title: string; body: string; confirm: string; danger?: boolean; onClose: () => void; onConfirm: () => void }) {
   return (
-    <Modal title={props.title} onClose={props.onClose}>
+    <Modal title={props.title} onClose={props.onClose} initialFocus="#dialog-cancel">
       <p>{props.body}</p>
       <div className="modal-actions">
-        <button className="btn" type="button" onClick={props.onClose}>Cancel</button>
-        <button className="btn btn-primary" type="button" onClick={props.onConfirm}>{props.confirm}</button>
+        <button id="dialog-cancel" className="btn" type="button" onClick={props.onClose}>Cancel</button>
+        <button className={props.danger ? 'btn btn-danger' : 'btn btn-primary'} type="button" onClick={props.onConfirm}>{props.confirm}</button>
       </div>
     </Modal>
   );
@@ -204,11 +228,51 @@ export function CropDialog(props: { src: string; initialSize: 1500 | 3000; onClo
   );
 }
 
-function Modal(props: { title: string; onClose: () => void; wide?: boolean; children: ReactNode }) {
+function Modal(props: { title: string; onClose: () => void; wide?: boolean; initialFocus?: string; children: ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const titleId = useId();
+  const opener = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    opener.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const root = ref.current;
+    if (!root) return;
+    const focusable = () =>
+      [...root.querySelectorAll<HTMLElement>('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])')].filter(
+        (el) => !el.hasAttribute('disabled'),
+      );
+    const preferred = props.initialFocus ? root.querySelector<HTMLElement>(props.initialFocus) : null;
+    (preferred || focusable()[0])?.focus();
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== 'Tab') return;
+      const items = focusable();
+      if (!items.length) return;
+      const first = items[0];
+      const last = items[items.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    root.addEventListener('keydown', onKey);
+    return () => {
+      root.removeEventListener('keydown', onKey);
+      opener.current?.focus();
+    };
+  }, [props.initialFocus]);
   return (
     <div className="modal-back" onMouseDown={props.onClose}>
-      <div className={props.wide ? 'modal wide' : 'modal'} role="dialog" aria-modal="true" aria-label={props.title} onMouseDown={(event) => event.stopPropagation()}>
-        <h2>{props.title}</h2>
+      <div
+        ref={ref}
+        className={props.wide ? 'modal wide' : 'modal'}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <h2 id={titleId}>{props.title}</h2>
         {props.children}
       </div>
     </div>

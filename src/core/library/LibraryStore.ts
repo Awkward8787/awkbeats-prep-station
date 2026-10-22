@@ -48,10 +48,13 @@ export class LibraryStore {
   }
 
   updateSettings(patch: Partial<Settings>): Settings {
-    if (patch.producerName != null) this.settings.producerName = patch.producerName.trim() || DEFAULT_SETTINGS.producerName;
+    if (patch.producerName != null) this.settings.producerName = patch.producerName.trim().slice(0, 200);
     if (patch.copyrightTemplate != null) this.settings.copyrightTemplate = patch.copyrightTemplate;
     if (patch.artworkExportSize === 1500 || patch.artworkExportSize === 3000) {
       this.settings.artworkExportSize = patch.artworkExportSize;
+    }
+    if (typeof patch.producerPromptDismissed === 'boolean') {
+      this.settings.producerPromptDismissed = patch.producerPromptDismissed;
     }
     this.save();
     return this.getSettings();
@@ -67,6 +70,7 @@ export class LibraryStore {
   update(id: string, patch: UserPatch): Beat {
     const beat = this.require(id);
     if (patch.title != null) beat.title = patch.title.trim().slice(0, 200);
+    if (patch.producer != null) beat.producer = patch.producer.trim().slice(0, 200);
     if (patch.artist != null) beat.artist = patch.artist.trim().slice(0, 200);
     if (patch.genre != null) beat.genre = patch.genre.trim().slice(0, 80);
     if (patch.mood != null) beat.mood = patch.mood.trim().slice(0, 80);
@@ -95,6 +99,7 @@ export class LibraryStore {
     if (patch.keyLocked != null) beat.keyLocked = patch.keyLocked;
     if (patch.status != null) beat.status = BeatValidation.status(patch.status);
     if (patch.notes != null) beat.notes = patch.notes.slice(0, 8000);
+    if (this.fileBound(patch)) beat.tagsDirty = true;
     beat.updatedAt = new Date().toISOString();
     this.save();
     return this.get(id)!;
@@ -108,9 +113,20 @@ export class LibraryStore {
       if (patch.status) beat.status = BeatValidation.status(patch.status);
       if (patch.genre != null) beat.genre = patch.genre.trim().slice(0, 80);
       if (patch.mood != null) beat.mood = patch.mood.trim().slice(0, 80);
+      if (patch.producer != null) beat.producer = patch.producer.trim().slice(0, 200);
       if (patch.artist != null) beat.artist = patch.artist.trim().slice(0, 200);
       if (patch.copyright != null) beat.copyright = patch.copyright.slice(0, 400);
       if (patch.addTags?.length) beat.tags = BeatValidation.tags([...beat.tags, ...patch.addTags]);
+      if (
+        patch.genre != null ||
+        patch.mood != null ||
+        patch.producer != null ||
+        patch.artist != null ||
+        patch.copyright != null ||
+        Boolean(patch.addTags?.length)
+      ) {
+        beat.tagsDirty = true;
+      }
       beat.updatedAt = new Date().toISOString();
       updated.push(this.get(id)!);
     }
@@ -128,13 +144,15 @@ export class LibraryStore {
       beat.bpmConfidence = analysis.bpmConfidence;
       beat.bpmOverride = null;
     }
-    if (!beat.keyLocked && analysis.keyName) {
+    const keyChanges = !beat.keyLocked && Boolean(analysis.keyName);
+    if (keyChanges) {
       beat.keyDetected = analysis.keyName;
       beat.camelotDetected = analysis.camelot;
       beat.keyConfidence = analysis.keyConfidence;
       beat.keyOverride = null;
       beat.camelotOverride = null;
     }
+    if ((!beat.bpmLocked && analysis.bpm != null) || keyChanges) beat.tagsDirty = true;
     beat.analyzedAt = new Date().toISOString();
     beat.updatedAt = beat.analyzedAt;
     this.save();
@@ -148,6 +166,7 @@ export class LibraryStore {
     beat.artworkFile = filename;
     beat.artworkWidth = width;
     beat.artworkHeight = height;
+    beat.tagsDirty = true;
     beat.updatedAt = new Date().toISOString();
     this.save();
     return this.get(id)!;
@@ -158,6 +177,14 @@ export class LibraryStore {
     if (!beat?.artworkFile) return null;
     const full = path.join(this.artworkDir, beat.artworkFile);
     return fs.existsSync(full) ? full : null;
+  }
+
+  clearTagsDirty(id: string): Beat {
+    const beat = this.require(id);
+    beat.tagsDirty = false;
+    beat.updatedAt = new Date().toISOString();
+    this.save();
+    return this.get(id)!;
   }
 
   remove(ids: string[]): void {
@@ -172,6 +199,17 @@ export class LibraryStore {
     this.save();
   }
 
+  private normalize(beat: Beat): Beat {
+    return {
+      ...beat,
+      producer: typeof beat.producer === 'string' ? beat.producer : '',
+      artist: beat.artist ?? '',
+      tags: beat.tags ?? [],
+      peaks: beat.peaks ?? [],
+      tagsDirty: beat.tagsDirty === true,
+    };
+  }
+
   private require(id: string): Beat {
     const beat = this.beats.find((item) => item.id === id);
     if (!beat) throw new Error('That beat is not in the library.');
@@ -182,8 +220,28 @@ export class LibraryStore {
     if (!fs.existsSync(this.filePath)) return;
     const parsed = JSON.parse(fs.readFileSync(this.filePath, 'utf8')) as LibraryFile;
     if (parsed.version !== 1 || !Array.isArray(parsed.beats)) throw new Error('Library file is not version 1.');
-    this.beats = parsed.beats;
+    this.beats = parsed.beats.map((beat) => this.normalize(beat));
     this.settings = { ...DEFAULT_SETTINGS, ...parsed.settings };
+    if (typeof this.settings.producerName !== 'string') this.settings.producerName = '';
+    if (typeof this.settings.producerPromptDismissed !== 'boolean') this.settings.producerPromptDismissed = false;
+  }
+
+  private fileBound(patch: UserPatch): boolean {
+    return (
+      patch.title != null ||
+      patch.producer != null ||
+      patch.artist != null ||
+      patch.genre != null ||
+      patch.mood != null ||
+      patch.tags != null ||
+      patch.comment != null ||
+      patch.copyright != null ||
+      patch.isrc != null ||
+      patch.date != null ||
+      patch.bpmScale != null ||
+      patch.bpmOverride !== undefined ||
+      patch.keyOverride !== undefined
+    );
   }
 
   private save(): void {
@@ -200,6 +258,7 @@ export class BeatRecord {
   format: AudioFormat;
   fileSize: number;
   title: string;
+  producer?: string;
   artist: string;
   copyright: string;
   date: string;
@@ -214,6 +273,7 @@ export class BeatRecord {
     durationSec: null,
     sampleRate: null,
     title: input.title,
+    producer: input.producer ?? '',
     artist: input.artist,
     genre: '',
     mood: '',
@@ -235,6 +295,7 @@ export class BeatRecord {
     keyConfidence: null,
     status: 'idea',
     notes: '',
+    tagsDirty: false,
     artworkFile: null,
     artworkWidth: null,
     artworkHeight: null,

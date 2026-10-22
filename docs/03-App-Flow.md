@@ -7,9 +7,9 @@
 | Project | AwkBeats Prep Station |
 | Document title | App Flow |
 | Document ID | ABP-FLOW |
-| Version | 1.1 |
+| Version | 1.2 |
 | Status | Final (as shipped) |
-| Last updated | 2026-10-21 (UTC) |
+| Last updated | 2026-10-22 (UTC) |
 | Author | Cursor Agent, for owner Awkward J |
 | Repo | https://github.com/Awkward8787/awkbeats-prep-station |
 | Branch | `cursor/awkbeats-prep-station-e2e2` |
@@ -42,12 +42,12 @@ There is no URL router. Screens are the main window plus dialogs. Auth is never 
 | Library | window | List, filter, inspect the selected beat | Launch | Quit | `src/renderer/App.tsx` |
 | Settings | dialog | Producer name, copyright template, default export size | Settings button, Ctrl/⌘ comma, macOS app menu | Save settings or Cancel | `dialogs.tsx` `SettingsDialog` |
 | Shortcuts | dialog | Shortcut list | Shortcuts button, Ctrl/⌘ / | Close or Escape | `ShortcutsDialog` |
-| Batch edit | dialog | Apply status, genre, mood, artist, tags, copyright to the selection | Batch edit in the inspector | Apply or Cancel | `BatchDialog` |
+| Batch edit | dialog | Apply status, genre, mood, producer name, artist name, tags, copyright to the selection | Batch edit in the inspector | Apply or Cancel | `BatchDialog` |
 | Remove confirm | dialog | Confirm removal from the library | Remove, or Ctrl/⌘ Backspace | Remove or Cancel | `ConfirmDialog` |
 | Crop cover | dialog | Square crop and export size | Adjust crop | Use cover or Cancel | `CropDialog` |
 | awkbeats.com | external browser | Brand site | Brand button | OS browser | `shell.openExternal` |
 
-Below 980px CSS width, the rail hides while a beat is selected (class `app.inspecting`) and the inspector hides when nothing is selected. The default window is 1440×920, so all three columns show.
+At 1359px CSS width and below, the workspace is 216px, a flexible table, and a 340px inspector, and the genre column hides. Genre stays in the title subline. The default window is 1440×920, so all three columns show. There is no 980px layout. The window cannot go below 1100×700.
 
 ## 2. Navigation
 
@@ -113,7 +113,7 @@ Caption: Import sequence. Local PCM is analyzed before the IPC returns. Compress
 
 Trigger: a row is selected. Goal: a working BPM and key the producer trusts.
 
-1. Click the row, or use ↑ and ↓. The inspector shows the working BPM at two decimals, the key name, the Camelot badge, the detected line, confidence, and the waveform.
+1. Click the row, or use ↑ and ↓. The inspector shows the working BPM once (whole numbers as integers), the key name, the Camelot badge, a difference line only when the working value is not the detected one, and the waveform. Key confidence stays hidden unless it is below 0.45, which shows "Low key confidence. Check by ear."
 2. Half-time sets `bpmScale` to 0.5 and clears `bpmOverride`. Double-time sets 2. Use detected sets scale 1 and clears the override. Each scale is applied to `bpmDetected`, so half then half does not quarter the tempo.
 3. Typing Working BPM sets `bpmOverride` if the number is between 40 and 300. Lock BPM sets `bpmLocked`. Key root and mode set `keyOverride` and `camelotOverride`. Lock key sets `keyLocked`.
 4. Analyze (Ctrl/⌘ Enter) runs again. Locked fields stay. Unlocked fields update, and a successful analysis clears an unlocked override so the new detection shows.
@@ -124,7 +124,7 @@ Success: the table column matches `BpmMath.working` and `KeyChoice.working`. Fai
 
 1. Edit fields in the inspector. Changes call `beat:update` immediately.
 2. Add cover, or Adjust crop. Crop opens with zoom 1–4 in the slider (the math allows 1–6). Export size is 1500×1500 or 3000×3000. Use cover draws a JPEG at quality 0.92 and calls `beat:artwork`.
-3. Write tags to file (Ctrl/⌘ S) calls `beat:write-tags` for the selection, or the active row if nothing is multi-selected. `TagCommit.fromBeat` builds the payload from working BPM, working key, settings producer name, and the artwork file.
+3. Write tags to file (Ctrl/⌘ S) calls `beat:write-tags` for the selection, or the active row if nothing is multi-selected. `TagCommit.fromBeat` builds the payload from the beat, including its own producer name and artist name, the working BPM, the working key, and the artwork file.
 4. Show in folder reveals the audio file. Export cover saves the JPEG via a save dialog.
 
 Success toast: "Tags were written to the file." Failure toast: "Tags could not be written. The file may be open in another app or read-only."
@@ -182,7 +182,7 @@ Space toggles `audio#beat-player`, whose `src` is `beat://audio/<id>`. The play 
 
 ### Filters
 
-`BeatQuery.match` requires every active filter. Search is a case-insensitive substring over title, artist, filename, genre, mood, key, Camelot, tags, notes, and comment. BPM filter uses the working BPM. Date filter compares the `date` string. Empty filters match everything.
+`BeatQuery.match` requires every active filter. Search is a case-insensitive substring over title, producer, artist, filename, genre, mood, key, Camelot, tags, notes, and comment. The sidebar also has Producer name and Artist name filters. BPM filter uses the working BPM. Date filter compares the `date` string. Empty filters match everything.
 
 ## 6. Payment or checkout
 
@@ -257,6 +257,7 @@ A phone-width screenshot is not a product surface. The 980px collapse is describ
 | --- | --- | --- | --- |
 | 2026-10-21 | 1.0 | Flow for the single-window 1.0.0 app. | Owner build brief. |
 | 2026-10-21 | 1.1 | The title bar, empty library, no-match state, and About box use `build/logo.png`. | Owner supplied the transparent logo. |
+| 2026-10-22 | 1.2 | Settings has Producer name. The metadata editor has Producer name and Artist name side by side. About no longer names a producer. | The app is for any producer. |
 
 ## 13. Sources
 

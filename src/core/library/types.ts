@@ -12,6 +12,7 @@ export type Beat = {
   durationSec: number | null;
   sampleRate: number | null;
   title: string;
+  producer: string;
   artist: string;
   genre: string;
   mood: string;
@@ -33,6 +34,8 @@ export type Beat = {
   keyConfidence: number | null;
   status: BeatStatus;
   notes: string;
+  /** True after a change that Write tags to file would put in the audio file. */
+  tagsDirty: boolean;
   artworkFile: string | null;
   artworkWidth: number | null;
   artworkHeight: number | null;
@@ -48,6 +51,8 @@ export type Settings = {
   producerName: string;
   copyrightTemplate: string;
   artworkExportSize: 1500 | 3000;
+  /** True after the producer dismisses the first-launch name sheet without saving a name. */
+  producerPromptDismissed: boolean;
 };
 
 export type AnalysisResult = {
@@ -63,6 +68,7 @@ export type AnalysisResult = {
 
 export type UserPatch = {
   title?: string;
+  producer?: string;
   artist?: string;
   genre?: string;
   mood?: string;
@@ -86,6 +92,7 @@ export type BatchPatch = {
   genre?: string;
   mood?: string;
   addTags?: string[];
+  producer?: string;
   artist?: string;
   copyright?: string;
 };
@@ -93,6 +100,8 @@ export type BatchPatch = {
 export type LibraryFilters = {
   search: string;
   status: BeatStatus | 'all';
+  producer: string;
+  artist: string;
   genre: string;
   key: string;
   tag: string;
@@ -106,10 +115,20 @@ export type SortKey = 'title' | 'bpm' | 'key' | 'date' | 'status' | 'genre' | 'i
 export type SortDirection = 'asc' | 'desc';
 
 export const DEFAULT_SETTINGS: Settings = {
-  producerName: 'Awkward J',
-  copyrightTemplate: '© {year} Awkward J',
+  producerName: '',
+  copyrightTemplate: '© {year} {producer}',
   artworkExportSize: 3000,
+  producerPromptDismissed: false,
 };
+
+/** Copyright line written on import when the file has no copyright tag. */
+export class CopyrightLine {
+  static forImport(template: string, year: string, producer: string, tagged: string): string {
+    if (tagged.trim()) return tagged;
+    if (!producer.trim()) return '';
+    return template.replaceAll('{year}', year).replaceAll('{producer}', producer.trim());
+  }
+}
 
 export class BeatStatusLabel {
   static text(status: BeatStatus): string {
@@ -162,12 +181,14 @@ export class KeyChoice {
 
 export class Format {
   static bpm(value: number | null | undefined): string {
-    if (value == null || !Number.isFinite(value)) return '—';
-    return value.toFixed(2);
+    if (value == null || !Number.isFinite(value)) return '';
+    const rounded = Math.round(value * 100) / 100;
+    if (Math.abs(rounded - Math.round(rounded)) < 0.001) return String(Math.round(rounded));
+    return rounded.toFixed(2);
   }
 
   static duration(seconds: number | null | undefined): string {
-    if (seconds == null || !Number.isFinite(seconds)) return '—';
+    if (seconds == null || !Number.isFinite(seconds)) return '';
     const total = Math.max(0, Math.round(seconds));
     const minutes = Math.floor(total / 60);
     const rest = total % 60;

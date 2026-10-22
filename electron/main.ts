@@ -6,6 +6,7 @@ import { PcmDecoder } from '../src/core/audio/PcmDecoder';
 import { TrackAnalyzer } from '../src/core/analysis/TrackAnalyzer';
 import { CsvExport } from '../src/core/library/CsvExport';
 import { Importer } from '../src/core/library/Importer';
+import { Theme } from '../src/core/brand/Theme';
 import { LibraryStore } from '../src/core/library/LibraryStore';
 import type { AnalysisResult, BatchPatch, Settings, UserPatch } from '../src/core/library/types';
 import { TagCommit } from '../src/core/tags/TagCommit';
@@ -64,7 +65,7 @@ async function createWindow(): Promise<void> {
     height: 920,
     minWidth: 1100,
     minHeight: 700,
-    backgroundColor: '#0c0d10',
+    backgroundColor: Theme.bg,
     title: 'AwkBeats Prep Station',
     icon: appIconPath(),
     show: false,
@@ -143,7 +144,9 @@ function buildMenu(): void {
                   type: 'info',
                   title: 'About AwkBeats Prep Station',
                   message: 'AwkBeats Prep Station',
-                  detail: `Version ${version()}\nPrepare beats for Awkward J.\n${SITE}\n\nKey and tempo are measured on this computer. Nothing is uploaded.`,
+                  detail: `Version ${version()}\nTag, analyze, and catalog your beats.\nPowered by AwkBeats · awkbeats.com\n\nKey and tempo are measured on this computer. Nothing is uploaded.`,
+                  buttons: ['OK'],
+                  defaultId: 0,
                   icon: nativeImage.createFromPath(brandLogoPath()),
                 });
               },
@@ -155,16 +158,16 @@ function buildMenu(): void {
 }
 
 app.setName('AwkBeats Prep Station');
-app.setAboutPanelOptions({
-  applicationName: 'AwkBeats Prep Station',
-  applicationVersion: '1.0.0',
-  version: '1.0.0',
-  copyright: 'Awkward J · awkbeats.com',
-  credits: 'Key and tempo are measured on this computer. Nothing is uploaded.',
-  iconPath: brandLogoPath(),
-});
 
 app.whenReady().then(async () => {
+  app.setAboutPanelOptions({
+    applicationName: 'AwkBeats Prep Station',
+    applicationVersion: version(),
+    version: version(),
+    copyright: `© ${new Date().getFullYear()} AwkBeats Prep Station`,
+    credits: 'Powered by AwkBeats',
+    iconPath: brandLogoPath(),
+  });
   store = new LibraryStore(app.getPath('userData'));
   protocol.handle('beat', (request) => {
     const url = new URL(request.url);
@@ -296,7 +299,8 @@ function registerIpc(): void {
       }
       try {
         TagWriter.write(beat.filePath, beat.format, TagCommit.fromBeat(beat, settings, store));
-        results.push({ id, ok: true, message: 'Tags were written to the file.' });
+        store.clearTagsDirty(id);
+        results.push({ id, ok: true, message: `Tags written to ${beat.fileName}` });
       } catch {
         results.push({ id, ok: false, message: 'Tags could not be written. The file may be open in another app or read-only.' });
       }

@@ -225,8 +225,8 @@ Analysis reads at most the first 90 seconds. Onset detection uses hop 32. Key de
 - The search field has a label ("Search the library") that is visually clipped with the `.sr` class and tied to `library-search`. Other fields have visible labels.
 - Focus: `:focus-visible` is a 2px solid `#f3d7a4` ring, 2px offset.
 - Keyboard: listed in `ShortcutsDialog` and implemented in `App.tsx`. Status keys 1–5 map onto `BEAT_STATUSES` order. Shortcuts do not fire while an input, textarea, or select is focused, except Escape closes a dialog.
-- Dialogs close with Escape, Cancel, or Close. Focus is not trapped in a WAI-ARIA modal loop in v1 (see debt).
-- Contrast: see ABP-DESIGN. Body text on `#0c0d10` is 17.1:1. Muted `#938d85` on `#2a2418` is 4.50:1, which meets WCAG AA for normal text.
+- Dialogs close with Escape, Cancel, or Close. Opening a dialog focuses the first field or the Cancel button, traps Tab inside the dialog, and returns focus to the opener.
+- Contrast: see ABP-DESIGN. Body text `#f7f2fb` on `#140b1f` is 17.36:1. The faintest label, `#a896c2` on the selected row `#3a2260`, is 4.95:1. Control borders `#7d68a0` on `#24163a` are 3.49:1. Text on gold is `#1f1405` on `#e4b15a`, 9.25:1.
 - Reduced motion: all transitions and animations are disabled.
 - The play button is 36×36 CSS pixels. Table rows are 44px tall. Filter rows are about 32px, under a 44px target. Noted as debt.
 - Color is not the only status signal. The status word is also printed.
@@ -304,14 +304,14 @@ Electron and Chromium write their default stderr. The app does not log file cont
 | Windows x64 | NSIS exe. Per-user install, directory changeable, not one-click. |
 | Windows arm64, Linux packages | Not built |
 | Web browsers | Not a target. The renderer is Chromium inside Electron 33. |
-| Phone | Not a target. Below 980px CSS pixels the layout collapses to two columns. That is for a small desktop window. |
+| Phone | Not a target. The window minimum is 1100×700. At 1359px and below, the genre column hides and the workspace columns are 216px, flexible, and 340px. |
 
 ## 16. Technical debt and known issues
 
 | Item | Severity | Proposed fix |
 | --- | --- | --- |
 | Unsigned installers | High for distribution | Owner certificates, then a signing job. |
-| Dialogs are not focus-trapped | Low | Add a focus trap when a modal opens. |
+| Dialog focus trap | Resolved | `dialogs.tsx` traps Tab, sets initial focus, and restores the opener. |
 | Some hit targets under 44px | Low | Increase `.status-item` padding if an audit requires a 44px target. |
 | `style-src 'unsafe-inline'` | Low | Move cover and crop positioning to CSS variables set from classes. |
 | Catalog is one JSON rewrite per edit | Low until thousands of beats | Migrate to SQLite with the same `Beat` fields. |

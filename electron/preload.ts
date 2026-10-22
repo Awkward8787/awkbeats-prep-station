@@ -25,6 +25,7 @@ export type PrepApi = {
   takeStartup: () => Promise<string[]>;
   pathsForFiles: (files: File[]) => string[];
   onMenu: (callback: (command: string) => void) => () => void;
+  platform: NodeJS.Platform;
 };
 
 const prep: PrepApi = {
@@ -57,6 +58,7 @@ const prep: PrepApi = {
       ipcRenderer.removeListener('menu-command', listener);
     };
   },
+  platform: process.platform,
 };
 
 contextBridge.exposeInMainWorld('prep', prep);

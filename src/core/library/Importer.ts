@@ -6,7 +6,7 @@ import { TagReader } from '../tags/TagReader';
 import { AudioFiles } from './AudioFiles';
 import { ImageSize } from './ImageSize';
 import { BeatRecord, LibraryStore } from './LibraryStore';
-import type { Beat, Settings } from './types';
+import { CopyrightLine, type Beat, type Settings } from './types';
 
 export type ImportResult = {
   imported: Beat[];
@@ -51,8 +51,9 @@ export class Importer {
       format,
       fileSize: stat.size,
       title: tags.title || base,
-      artist: tags.artist || settings.producerName,
-      copyright: tags.copyright || settings.copyrightTemplate.replaceAll('{year}', year),
+      producer: tags.producer || settings.producerName,
+      artist: tags.artist,
+      copyright: CopyrightLine.forImport(settings.copyrightTemplate, year, tags.producer || settings.producerName, tags.copyright),
       date: (tags.date || stat.mtime.toISOString()).slice(0, 10),
     });
     created.genre = tags.genre;

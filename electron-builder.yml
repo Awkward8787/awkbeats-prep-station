@@ -1,6 +1,6 @@
 appId: com.awkbeats.prepstation
 productName: AwkBeats Prep Station
-copyright: Copyright © 2026 Awkward J
+copyright: Copyright © 2026 AwkBeats Prep Station
 directories:
   output: release
   buildResources: build

@@ -5,6 +5,7 @@ export class CsvExport {
   static readonly headers = [
     'id',
     'title',
+    'producer',
     'artist',
     'file_name',
     'file_path',
@@ -44,6 +45,7 @@ export class CsvExport {
         [
           beat.id,
           beat.title,
+          beat.producer || '',
           beat.artist,
           beat.fileName,
           beat.filePath,

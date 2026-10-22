@@ -26,6 +26,7 @@ export type TagPayload = {
 
 export type ReadTags = {
   title: string;
+  producer: string;
   artist: string;
   genre: string;
   mood: string;
@@ -56,14 +57,14 @@ export class TagText {
     const yearFirst = trimmed.match(/^(\d{4})\s+(.+)$/);
     if (yearFirst) return `${yearFirst[1]} ${yearFirst[2]}`;
     const symbol = trimmed.match(/^(?:©|\(c\)|copyright)\s*(\d{4})\s*(.*)$/i);
-    if (symbol) return `${symbol[1]} ${symbol[2] || 'Awkward J'}`.trim();
+    if (symbol) return `${symbol[1]} ${symbol[2]}`.trim();
     const year = trimmed.match(/(\d{4})/);
     if (year) {
       const rest = trimmed
         .replace(/©|\(c\)|copyright/gi, '')
         .replace(year[1], '')
         .trim();
-      return `${year[1]} ${rest || 'Awkward J'}`.replace(/\s+/g, ' ');
+      return rest ? `${year[1]} ${rest}` : year[1];
     }
     return `${new Date().getFullYear()} ${trimmed}`;
   }

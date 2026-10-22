@@ -30,7 +30,7 @@ export class TagCommit {
       copyright: beat.copyright,
       isrc: beat.isrc,
       date: beat.date,
-      producer: settings.producerName,
+      producer: beat.producer,
       artwork,
     };
   }

@@ -1,19 +1,21 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import logoUrl from '../../build/logo.png';
 import { TrackAnalyzer } from '@core/analysis/TrackAnalyzer';
-import { BpmMath } from '@core/analysis/BpmMath';
 import { BeatQuery } from '@core/library/BeatRules';
 import { UserMessage } from '@core/library/UserMessage';
-import { BEAT_STATUSES, BeatStatusLabel, type Beat, type LibraryFilters, type Settings, type SortDirection, type SortKey } from '@core/library/types';
+import { BEAT_STATUSES, KeyChoice, type Beat, type LibraryFilters, type Settings, type SortDirection, type SortKey } from '@core/library/types';
 import { WebAudioDecode } from './decode';
-import { CropDialog, ShortcutsDialog, SettingsDialog, BatchDialog, ConfirmDialog } from './dialogs';
+import { CropDialog, ShortcutsDialog, SettingsDialog, BatchDialog, ConfirmDialog, ProducerDialog } from './dialogs';
 import { Inspector } from './Inspector';
+import { KeyPreview } from './KeyPreview';
 import { Sidebar } from './Sidebar';
 import { TrackTable } from './TrackTable';
 
 const emptyFilters: LibraryFilters = {
   search: '',
   status: 'all',
+  producer: '',
+  artist: '',
   genre: '',
   key: '',
   tag: '',
@@ -31,6 +33,8 @@ type Dialog =
   | { type: 'remove' }
   | { type: 'crop'; src: string; name: string };
 
+type ToastItem = { id: number; text: string; tone: 'ok' | 'error' };
+
 export function App() {
   const [beats, setBeats] = useState<Beat[]>([]);
   const [settings, setSettings] = useState<Settings | null>(null);
@@ -41,15 +45,17 @@ export function App() {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [anchor, setAnchor] = useState(0);
   const [dialog, setDialog] = useState<Dialog>(null);
-  const [toasts, setToasts] = useState<{ id: number; text: string }[]>([]);
+  const [toasts, setToasts] = useState<ToastItem[]>([]);
   const [busy, setBusy] = useState<string[]>([]);
+  const [job, setJob] = useState<{ total: number } | null>(null);
   const [dragOver, setDragOver] = useState(false);
   const [playing, setPlaying] = useState(false);
+  const dragDepth = useRef(0);
 
-  const toast = useCallback((text: string) => {
+  const toast = useCallback((text: string, tone: 'ok' | 'error' = 'ok') => {
     const id = Date.now() + Math.random();
-    setToasts((current) => [...current, { id, text }]);
-    window.setTimeout(() => setToasts((current) => current.filter((item) => item.id !== id)), 4200);
+    setToasts((current) => [...current, { id, text, tone }]);
+    if (tone === 'ok') window.setTimeout(() => setToasts((current) => current.filter((item) => item.id !== id)), 4000);
   }, []);
 
   const replace = useCallback((beat: Beat) => {
@@ -65,6 +71,7 @@ export function App() {
       const unique = [...new Set(ids)];
       if (!unique.length) return;
       setBusy((current) => [...new Set([...current, ...unique])]);
+      setJob({ total: unique.length });
       try {
         const local = await window.prep.analyze(unique);
         setBeats(local.beats);
@@ -77,14 +84,15 @@ export function App() {
             const analysis = TrackAnalyzer.analyze(decoded.samples, decoded.sampleRate);
             const saved = await window.prep.submitAnalysis(id, analysis);
             if ('beat' in saved && saved.beat) replace(saved.beat);
-            else if ('error' in saved && saved.error) toast(saved.error);
+            else if ('error' in saved && saved.error) toast(saved.error, 'error');
           } catch {
-            toast(`Could not analyze ${beat.title}.`);
+            toast(`Couldn't read ${beat.fileName}. Check that the file plays in another app, then choose Re-analyze.`, 'error');
           }
         }
-        for (const error of local.errors) toast(error.message);
+        for (const error of local.errors) toast(error.message, 'error');
       } finally {
         setBusy((current) => current.filter((id) => !unique.includes(id)));
+        setJob(null);
       }
     },
     [replace, toast],
@@ -96,13 +104,23 @@ export function App() {
       const result = await window.prep.importPaths(paths);
       await refresh();
       toast(UserMessage.imported(result.imported.length, result.duplicates, result.failed.length));
+      if (result.failed.length) toast(result.failed[0].message, 'error');
       await analyzeIds(result.needsDecode);
     },
     [analyzeIds, refresh, toast],
   );
 
-  const actions = useRef({ importPaths, analyzeIds, toast, selected, activeId });
-  actions.current = { importPaths, analyzeIds, toast, selected, activeId };
+  const writeTags = useCallback(async (ids: string[]) => {
+    if (!ids.length) return;
+    const results = await window.prep.writeTags(ids);
+    setBeats(await window.prep.list());
+    const failed = results.filter((item) => !item.ok);
+    if (failed.length) toast(failed[0].message, 'error');
+    else if (results[0]) toast(results.length === 1 ? results[0].message : `Tags written to ${results.length} files.`);
+  }, [toast]);
+
+  const actions = useRef({ importPaths, analyzeIds, toast, writeTags, selected, activeId });
+  actions.current = { importPaths, analyzeIds, toast, writeTags, selected, activeId };
 
   useEffect(() => {
     void (async () => {
@@ -121,10 +139,7 @@ export function App() {
       if (command === 'settings') setDialog({ type: 'settings' });
       if (command === 'shortcuts') setDialog({ type: 'shortcuts' });
       if (command === 'analyze') void current.analyzeIds(ids);
-      if (command === 'write-tags') void window.prep.writeTags(ids).then((results) => {
-        const failed = results.filter((item) => !item.ok);
-        current.toast(failed.length ? failed[0].message : UserMessage.tagsWritten);
-      });
+      if (command === 'write-tags') void current.writeTags(ids);
       if (command === 'remove') setDialog({ type: 'remove' });
     });
   }, []);
@@ -135,12 +150,9 @@ export function App() {
   );
   const active = beats.find((beat) => beat.id === activeId) || null;
 
-  async function writeTags(ids: string[]) {
-    if (!ids.length) return;
-    const results = await window.prep.writeTags(ids);
-    const failed = results.filter((item) => !item.ok);
-    toast(failed.length ? failed[0].message : UserMessage.tagsWritten);
-  }
+  useEffect(() => {
+    if (activeId && beats.length && !visible.some((beat) => beat.id === activeId)) setActiveId(null);
+  }, [visible, activeId, beats.length]);
 
   function choose(id: string, index: number, event: { shiftKey: boolean; metaKey: boolean; ctrlKey: boolean }) {
     if (event.shiftKey) {
@@ -162,11 +174,12 @@ export function App() {
       const target = event.target as HTMLElement | null;
       const typing = target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT' || target.isContentEditable);
       const mod = event.metaKey || event.ctrlKey;
-      if (event.key === 'Escape' && dialog) {
-        setDialog(null);
+      if (event.key === 'Escape') {
+        KeyPreview.stop();
+        if (dialog) setDialog(null);
         return;
       }
-      if (typing) return;
+      if (dialog || typing) return;
       if (mod && event.key.toLowerCase() === 'f') {
         event.preventDefault();
         document.getElementById('library-search')?.focus();
@@ -194,12 +207,17 @@ export function App() {
       } else if (mod && event.key === 'Backspace') {
         event.preventDefault();
         setDialog({ type: 'remove' });
-      } else if ((event.key === 'ArrowDown' || event.key === 'ArrowUp') && visible.length) {
+      } else if (event.key.toLowerCase() === 'k' && active) {
+        const name = KeyChoice.working(active).name;
+        if (!name) return;
+        event.preventDefault();
+        KeyPreview.toggleChord(name);
+      } else if ((event.key === 'ArrowDown' || event.key === 'ArrowUp') && visible.length && !target?.closest('table.tracks')) {
         event.preventDefault();
         const index = Math.max(0, visible.findIndex((beat) => beat.id === activeId));
         const next = visible[Math.min(visible.length - 1, Math.max(0, index + (event.key === 'ArrowDown' ? 1 : -1)))];
         if (next) choose(next.id, visible.indexOf(next), event);
-      } else if (event.key === ' ' && active) {
+      } else if (event.key === ' ' && active && !target?.closest('table.tracks')) {
         event.preventDefault();
         const audio = document.getElementById('beat-player') as HTMLAudioElement | null;
         if (!audio) return;
@@ -220,54 +238,81 @@ export function App() {
     return map;
   }, [beats]);
 
+  const mac = window.prep.platform === 'darwin';
+  const showProducer = Boolean(settings && beats.length === 0 && !settings.producerName && !settings.producerPromptDismissed && !dialog);
+  const exportLabel = selected.length ? `Export ${selected.length} selected` : 'Export catalog';
+  const progress = job && busy.length ? `Analyzing ${job.total - busy.length + 1} of ${job.total}…` : '';
+
+  async function openCover(file: File) {
+    const copy = await file.arrayBuffer();
+    setDialog({ type: 'crop', src: URL.createObjectURL(new Blob([copy])), name: file.name });
+  }
+
   return (
-    <div className={active ? 'app inspecting' : 'app'} onDragOver={(event) => { event.preventDefault(); setDragOver(true); }} onDragLeave={() => setDragOver(false)} onDrop={(event) => {
-      event.preventDefault();
-      setDragOver(false);
-      const paths = window.prep.pathsForFiles(Array.from(event.dataTransfer.files));
-      void importPaths(paths);
-    }}>
+    <div
+      className={beats.length === 0 ? 'app empty-lib' : 'app'}
+      onDragEnter={(event) => { event.preventDefault(); dragDepth.current += 1; setDragOver(true); }}
+      onDragOver={(event) => event.preventDefault()}
+      onDragLeave={() => { dragDepth.current -= 1; if (dragDepth.current <= 0) { dragDepth.current = 0; setDragOver(false); } }}
+      onDrop={(event) => {
+        event.preventDefault();
+        dragDepth.current = 0;
+        setDragOver(false);
+        const paths = window.prep.pathsForFiles(Array.from(event.dataTransfer.files));
+        void importPaths(paths);
+      }}
+    >
       <a className="sr" href="#library">Skip to library</a>
       <header className="topbar">
-        <button className="brand" onClick={() => void window.prep.openSite()} type="button">
+        <div className="brand">
           <BrandMark />
           <span>
             <span className="brand-name"><span>AWK</span>BEATS</span>
             <span className="brand-sub">Prep Station</span>
           </span>
-        </button>
+        </div>
         <div className="search">
-          <label className="sr" htmlFor="library-search">Search the library</label>
-          <input id="library-search" value={filters.search} onChange={(event) => setFilters({ ...filters, search: event.target.value })} />
+          <label className="sr" htmlFor="library-search">Search</label>
+          <SearchIcon />
+          <input
+            id="library-search"
+            placeholder="Search title, tag, genre or key"
+            value={filters.search}
+            onChange={(event) => setFilters({ ...filters, search: event.target.value })}
+          />
+          <span className="search-hint" aria-hidden="true"><kbd>{mac ? '⌘' : 'Ctrl'}</kbd><kbd>F</kbd></span>
         </div>
         <div className="top-actions">
-          <button className="btn" type="button" onClick={() => void window.prep.pickAudio().then((paths) => importPaths(paths))}>Import</button>
-          <button className="btn" type="button" onClick={() => void analyzeIds(selected.length ? selected : activeId ? [activeId] : visible.map((beat) => beat.id))} disabled={!beats.length}>Analyze</button>
-          <button className="btn" type="button" onClick={() => void window.prep.exportCsv(selected)}>Export CSV</button>
+          <button className="btn btn-primary" type="button" onClick={() => void window.prep.pickAudio().then((paths) => importPaths(paths))}>Import beats</button>
+          <button
+            className="btn"
+            type="button"
+            disabled={!beats.length}
+            title={beats.length ? undefined : 'Import beats first'}
+            onClick={() => void window.prep.exportCsv(selected).then((file) => file && toast(`Catalog saved to ${file}`))}
+          >{exportLabel}</button>
         </div>
       </header>
       <div className="workspace">
-        <Sidebar
-          filters={filters}
-          counts={counts}
-          beats={beats}
-          onChange={setFilters}
-          onClear={() => setFilters(emptyFilters)}
-        />
+        <Sidebar filters={filters} counts={counts} beats={beats} onChange={setFilters} onClear={() => setFilters(emptyFilters)} />
         <main id="library" className="table-wrap">
           {beats.length === 0 ? (
             <div className="empty">
-              <div>
-                <img className="empty-mark" src={logoUrl} alt="AwkBeats" />
+              <div className={dragOver ? 'drop-zone drag' : 'drop-zone'}>
+                <img className="empty-mark" src={logoUrl} alt="" />
                 <h2>{UserMessage.emptyTitle}</h2>
                 <p className="muted">{UserMessage.emptyBody}</p>
+                <div className="button-row">
+                  <button className="btn btn-primary" type="button" onClick={() => void window.prep.pickAudio().then((paths) => importPaths(paths))}>Import beats</button>
+                  <button className="btn" type="button" onClick={() => void window.prep.pickFolder().then((folder) => { if (folder) return importPaths([folder]); })}>Import a folder</button>
+                </div>
               </div>
             </div>
           ) : visible.length === 0 ? (
             <div className="empty">
               <div>
-                <img className="empty-mark" src={logoUrl} alt="" />
-                <h2>{UserMessage.noMatches}</h2>
+                <h2>{filters.search ? `No beats match "${filters.search}".` : 'No beats match these filters.'}</h2>
+                <button className="btn" type="button" onClick={() => setFilters(emptyFilters)}>Clear search and filters</button>
               </div>
             </div>
           ) : (
@@ -294,7 +339,7 @@ export function App() {
           onChange={async (patch) => {
             if (!active) return;
             const result = await window.prep.updateBeat(active.id, patch);
-            if ('error' in result && result.error) toast(result.error);
+            if ('error' in result && result.error) toast(result.error, 'error');
             if ('beat' in result && result.beat) replace(result.beat);
           }}
           onAnalyze={() => active && void analyzeIds([active.id])}
@@ -307,9 +352,9 @@ export function App() {
             if (!picked) return;
             const copy = new ArrayBuffer(picked.bytes.byteLength);
             new Uint8Array(copy).set(picked.bytes);
-            const blob = new Blob([copy]);
-            setDialog({ type: 'crop', src: URL.createObjectURL(blob), name: picked.name });
+            setDialog({ type: 'crop', src: URL.createObjectURL(new Blob([copy])), name: picked.name });
           }}
+          onDropCover={(file) => void openCover(file)}
           onAdjust={async () => {
             if (!active?.artworkFile) return;
             const response = await fetch(`beat://cover/${active.id}?v=${encodeURIComponent(active.updatedAt)}`);
@@ -321,14 +366,40 @@ export function App() {
         />
       </div>
       <footer className="footer">
-        <span>{beats.length} beats{selected.length ? ` · ${selected.length} selected` : ''}</span>
-        <span>{active ? `${BeatStatusLabel.text(active.status)} · ${BpmMath.interpretation({ bpmDetected: active.bpmDetected, bpmScale: active.bpmScale, bpmOverride: active.bpmOverride })}` : 'Awkward J · awkbeats.com'}</span>
-        <button className="btn-ghost" type="button" onClick={() => setDialog({ type: 'shortcuts' })}>Shortcuts</button>
+        <span>{beats.length} {beats.length === 1 ? 'beat' : 'beats'} · {selected.length} selected</span>
+        <span>{progress}</span>
+        <span className="footer-right">
+          <button className="powered" type="button" onClick={() => void window.prep.openSite()}>
+            Powered by <span>AwkBeats</span>
+          </button>
+          <button className="btn btn-ghost" type="button" onClick={() => setDialog({ type: 'shortcuts' })}>Shortcuts</button>
+        </span>
       </footer>
-      {dragOver ? <div className="drop">Drop beats to import</div> : null}
-      <div className="toast-wrap" aria-live="polite">
-        {toasts.map((item) => <div className="toast" key={item.id}>{item.text}</div>)}
+      {dragOver && beats.length > 0 ? (
+        <div className="drop">
+          <img src={logoUrl} alt="" />
+          <strong>Drop to import</strong>
+          <span>WAV, MP3, AIFF or FLAC</span>
+        </div>
+      ) : null}
+      <div className="toast-wrap">
+        {toasts.map((item) => (
+          <div className={item.tone === 'error' ? 'toast error' : 'toast'} key={item.id} role={item.tone === 'error' ? 'alert' : 'status'}>
+            <span>{item.text}</span>
+            {item.tone === 'error' ? <button type="button" aria-label="Dismiss" onClick={() => setToasts((current) => current.filter((toastItem) => toastItem.id !== item.id))}>×</button> : null}
+          </div>
+        ))}
       </div>
+      {showProducer && settings ? (
+        <ProducerDialog
+          onLater={() => {
+            void window.prep.updateSettings({ producerPromptDismissed: true }).then(setSettings);
+          }}
+          onSave={(producerName) => {
+            void window.prep.updateSettings({ producerName, producerPromptDismissed: true }).then(setSettings);
+          }}
+        />
+      ) : null}
       {dialog?.type === 'settings' && settings ? (
         <SettingsDialog
           settings={settings}
@@ -357,7 +428,8 @@ export function App() {
         <ConfirmDialog
           title={UserMessage.removeTitle}
           body={UserMessage.removeBody}
-          confirm="Remove"
+          confirm="Remove from library"
+          danger
           onClose={() => setDialog(null)}
           onConfirm={async () => {
             const ids = selected.length ? selected : activeId ? [activeId] : [];
@@ -390,3 +462,11 @@ export function BrandMark() {
   return <img className="brand-mark" src={logoUrl} alt="" />;
 }
 
+function SearchIcon() {
+  return (
+    <svg className="search-icon" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
+      <circle cx="7" cy="7" r="4.2" fill="none" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M10.4 10.4 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  );
+}

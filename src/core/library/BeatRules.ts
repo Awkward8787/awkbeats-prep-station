@@ -53,6 +53,8 @@ export class BeatQuery {
 
   static match(beat: Beat, filters: LibraryFilters): boolean {
     if (filters.status !== 'all' && beat.status !== filters.status) return false;
+    if (filters.producer && !(beat.producer || '').toLowerCase().includes(filters.producer.trim().toLowerCase())) return false;
+    if (filters.artist && !(beat.artist || '').toLowerCase().includes(filters.artist.trim().toLowerCase())) return false;
     if (filters.genre && beat.genre.toLowerCase() !== filters.genre.toLowerCase()) return false;
     if (filters.tag && !beat.tags.some((tag) => tag.toLowerCase() === filters.tag.toLowerCase())) return false;
     if (filters.key) {
@@ -72,6 +74,7 @@ export class BeatQuery {
       const key = KeyChoice.working(beat);
       const hay = [
         beat.title,
+        beat.producer || '',
         beat.artist,
         beat.fileName,
         beat.genre,
