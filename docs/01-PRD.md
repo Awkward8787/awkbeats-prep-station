@@ -58,7 +58,7 @@ Current alternatives the brief rejected: essentia.js and other GPL or AGPL detec
 2. Tempo and key measured on the machine, accurate on steady reference material to 0.01 BPM, with half-time and double-time and a hand override that can be locked.
 3. Tags written into the formats distributors actually read: ID3v2 for MP3, RIFF INFO plus ID3 for WAV, ID3 for AIFF, Vorbis comments for FLAC, with embedded cover art.
 4. A dark AwkBeats interface that is usable from the keyboard.
-5. Installers for macOS and Windows produced by GitHub Actions and stored as workflow artifacts. Unsigned is acceptable for this version.
+5. Installers for macOS and Windows produced by GitHub Actions. Branch pushes store them as workflow artifacts. A `v*` tag attaches them to a GitHub Release. Unsigned is acceptable for this version.
 
 ### Non-goals
 
@@ -175,7 +175,7 @@ As a producer, I want a status, notes, batch edits, and a CSV so that I can run 
 | --- | --- | --- | --- |
 | NFR-001 | Analysis and tagging libraries are MIT, BSD, Apache-2.0, or original code. No AGPL/GPL detector such as essentia.js. | Shipped | `scripts/check-licenses.mjs`, `src/core/analysis/` |
 | NFR-002 | Tests assert BPM and key against generated references. Tests are not weakened to pass. | Shipped | `tests/bpm-key.test.ts` |
-| NFR-003 | GitHub Actions builds a macOS dmg and a Windows exe and uploads them as artifacts. No GitHub Release. | Shipped | `.github/workflows/installers.yml`, `--publish never` |
+| NFR-003 | GitHub Actions builds a macOS dmg and a Windows exe. Branch pushes upload them as artifacts. A `v*` tag attaches them to a GitHub Release. Builds stay unsigned. | Shipped | `.github/workflows/installers.yml`, `.github/workflows/release.yml` |
 | NFR-004 | Dark AwkBeats UI. No placeholder copy and no developer notes in the interface. | Shipped | `src/renderer/styles.css`, `UserMessage.ts` |
 | NFR-005 | Renderer is sandboxed. Node is not exposed except through the preload bridge. | Shipped | `electron/main.ts` webPreferences |
 | NFR-006 | No network calls except the user opening https://awkbeats.com from the brand control, and the dev server in development. | Shipped | `SITE` constant, CSP in `src/renderer/index.html` |

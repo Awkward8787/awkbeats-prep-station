@@ -37,7 +37,7 @@
 
 ## 1. Delivery summary
 
-AwkBeats Prep Station 1.0.0 was built in this repository as a local Electron app: library, offline BPM and key analysis, tag writing, cover art, CSV, batch tools, tests, and a GitHub Actions workflow that builds an unsigned macOS dmg and a Windows exe. No GitHub Release is published. The builder was Cursor Agent. The owner is Awkward J. Status: shipped as source and as CI installer artifacts once the shipping commit's workflow is green.
+AwkBeats Prep Station 1.0.0 was built in this repository as a local Electron app: library, offline BPM and key analysis, tag writing, cover art, CSV, batch tools, tests, and a GitHub Actions workflow that builds an unsigned macOS dmg and a Windows exe. Branch pushes keep those installers as workflow artifacts. A `v*` tag publishes them on the GitHub Releases page. The builder was Cursor Agent. The owner is Awkward J.
 
 ## 2. Phases and milestones
 
@@ -82,7 +82,7 @@ Caption: The build landed in one working tree. The signing bar is the owner's, a
 | TASK-011 | Windows Authenticode | Owner | NFR-003 follow-up | Planned | EV recommended |
 | TASK-012 | Confirm legal entity and license | Owner | Q-001, Q-002 | Planned | LICENSE is proprietary pending confirmation |
 | TASK-013 | Use the iOS app icon and transparent logo | Owner | Q-004 | Shipped | `build/icon.png`, `build/logo.png`. AJ svg removed |
-| TASK-014 | Do not publish a Release | Build | brief | Shipped | `publish: null` |
+| TASK-014 | Publish installers only from a `v*` tag | Build | brief | Shipped | `publish: null` on the builder. `.github/workflows/release.yml` attaches files with `GITHUB_TOKEN` |
 
 The pull request that contains this file is the delivery PR into `main`. Commit SHAs are on that branch.
 
@@ -195,7 +195,7 @@ Owner actions, in order:
 | CI cannot sign, so the first artifacts warn on open | Documented. Unsigned is the accepted v1 state. |
 | A future contributor adds essentia or another GPL detector | `npm run licenses` fails the test job |
 | Detector wrong on a dense mix | Override, lock, half-time, double-time. Tests stay strict on generated material. |
-| `GITHUB_TOKEN` tempts electron-builder to publish | `publish: null` and `--publish never` |
+| `GITHUB_TOKEN` tempts electron-builder to publish | `publish: null` and `--publish never`. Only `.github/workflows/release.yml` creates a Release, and only for an existing `v*` tag |
 
 ## 11. Maintenance plan
 

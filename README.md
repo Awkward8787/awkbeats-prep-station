@@ -38,10 +38,12 @@ npm run dev
 
 ## Installers
 
-Unsigned installers are built in GitHub Actions on every push (`.github/workflows/installers.yml`):
+Unsigned installers are built in GitHub Actions on every branch push (`.github/workflows/installers.yml`) and uploaded as workflow artifacts:
 
 - macOS: `release/AwkBeats-Prep-Station-1.0.0-mac-arm64.dmg` and `…-mac-x64.dmg` (artifact `AwkBeats-Prep-Station-macOS`)
 - Windows: `release/AwkBeats-Prep-Station-1.0.0-win-x64.exe` (artifact `AwkBeats-Prep-Station-Windows`)
+
+Pushing a tag that matches `v*` runs `.github/workflows/release.yml`. It builds the same unsigned disk images (arm64 and x64) and the Windows NSIS installer, then attaches them to the GitHub Release for that tag. The notes are `.github/release-notes.md`. `npm run dist:mac` and `npm run dist:win` still pass `--publish never`, and `electron-builder.yml` keeps `publish: null`, so the builder itself does not create the Release.
 
 Local equivalents, on the matching OS:
 
@@ -50,9 +52,7 @@ npm run dist:mac
 npm run dist:win
 ```
 
-Both commands pass `--publish never`. Do not publish a GitHub Release from CI.
-
-macOS users will see a Gatekeeper warning until the app is signed and notarized. Windows SmartScreen will warn until the installer is signed.
+The installers are unsigned. macOS needs a right-click, then Open. Windows SmartScreen needs More info, then Run anyway.
 
 ## Code signing and notarization
 

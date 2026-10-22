@@ -1,0 +1,124 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing v* tag to attach installers to. Leave empty when this run is already on a tag.'
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run typecheck
+      - run: npm run licenses
+
+  macos:
+    name: macOS dmg
+    needs: test
+    runs-on: macos-latest
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: false
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run dist:mac
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-macos
+          path: release/*.dmg
+          if-no-files-found: error
+
+  windows:
+    name: Windows exe
+    needs: test
+    runs-on: windows-latest
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: false
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run dist:win
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-windows
+          path: release/*.exe
+          if-no-files-found: error
+
+  publish:
+    name: GitHub Release
+    needs: [macos, windows]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: release-*
+          path: installers
+          merge-multiple: true
+      - name: Resolve tag
+        id: tag
+        env:
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
+          TAG_INPUT: ${{ inputs.tag }}
+        run: |
+          set -eu
+          if [ "$REF_TYPE" = "tag" ]; then
+            tag="$REF_NAME"
+          else
+            tag="$TAG_INPUT"
+          fi
+          case "$tag" in
+            v*) ;;
+            *) echo "Tag must match v* (got '${tag}')." >&2; exit 1 ;;
+          esac
+          case "$tag" in
+            *[!A-Za-z0-9._-]*) echo "Tag has unsupported characters." >&2; exit 1 ;;
+          esac
+          gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${tag}" >/dev/null
+          echo "name=${tag}" >> "$GITHUB_OUTPUT"
+      - name: Require both disk images and the Windows installer
+        run: |
+          set -eu
+          ls -la installers
+          test "$(find installers -name '*.dmg' | wc -l)" -eq 2
+          test "$(find installers -name '*.exe' | wc -l)" -eq 1
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.name }}
+          name: AwkBeats Prep Station ${{ steps.tag.outputs.name }}
+          body_path: .github/release-notes.md
+          files: |
+            installers/*.dmg
+            installers/*.exe
+          fail_on_unmatched_files: true
+          overwrite_files: true
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
