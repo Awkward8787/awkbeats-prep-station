@@ -23,7 +23,8 @@ export function TrackTable(props: {
   onChoose: (id: string, index: number, event: { shiftKey: boolean; metaKey: boolean; ctrlKey: boolean }) => void;
   onSelectVisible: (selected: boolean) => void;
 }) {
-  const narrow = useNarrow();
+  const hideGenre = useMaxWidth('(max-width: 1359px)');
+  const hideDate = useMaxWidth('(max-width: 1599px)');
   const tabId = props.beats.some((beat) => beat.id === props.activeId) ? props.activeId : props.beats[0]?.id;
   const visibleIds = props.beats.map((beat) => beat.id);
   const selectedVisible = visibleIds.filter((id) => props.selected.includes(id)).length;
@@ -46,7 +47,7 @@ export function TrackTable(props: {
             <CheckBox
               checked={allVisible}
               indeterminate={selectedVisible > 0 && !allVisible}
-              ariaLabel={allVisible ? 'Clear selection' : 'Select all visible beats'}
+              ariaLabel="Select all visible beats"
               onChange={(checked) => props.onSelectVisible(checked)}
             />
           </th>
@@ -76,8 +77,8 @@ export function TrackTable(props: {
             credit,
             beat.format.toUpperCase(),
             Format.duration(beat.durationSec),
-            narrow && beat.genre ? beat.genre : '',
-            narrow && beat.date ? Format.date(beat.date) : '',
+            hideGenre && beat.genre ? beat.genre : '',
+            hideDate && beat.date ? Format.date(beat.date) : '',
             props.busy.includes(beat.id) ? 'Analyzing' : '',
           ].filter(Boolean);
           return (
@@ -155,14 +156,14 @@ function LockMark() {
   );
 }
 
-function useNarrow(): boolean {
-  const [narrow, setNarrow] = useState(false);
+function useMaxWidth(query: string): boolean {
+  const [matches, setMatches] = useState(false);
   useEffect(() => {
-    const query = window.matchMedia('(max-width: 1359px)');
-    const apply = () => setNarrow(query.matches);
+    const media = window.matchMedia(query);
+    const apply = () => setMatches(media.matches);
     apply();
-    query.addEventListener('change', apply);
-    return () => query.removeEventListener('change', apply);
-  }, []);
-  return narrow;
+    media.addEventListener('change', apply);
+    return () => media.removeEventListener('change', apply);
+  }, [query]);
+  return matches;
 }

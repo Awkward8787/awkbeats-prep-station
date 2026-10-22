@@ -182,6 +182,16 @@ export class LibraryStore {
     return fs.existsSync(full) ? full : null;
   }
 
+  /** Undo of a library-only rename. Does not go through `update`, which would mark the row dirty. */
+  restoreTitle(id: string, title: string, tagsDirty: boolean): Beat {
+    const beat = this.require(id);
+    beat.title = title.trim().slice(0, 200);
+    beat.tagsDirty = tagsDirty;
+    beat.updatedAt = new Date().toISOString();
+    this.save();
+    return this.get(id)!;
+  }
+
   clearTagsDirty(id: string): Beat {
     const beat = this.require(id);
     beat.tagsDirty = false;

@@ -54,6 +54,7 @@ export function ShortcutsDialog(props: { onClose: () => void }) {
     { label: 'Import a folder', keys: [mod, 'Shift', 'I'] },
     { label: 'Export catalog', keys: [mod, 'E'] },
     { label: 'Re-analyze', keys: [mod, 'Enter'] },
+    { label: 'Undo names', keys: [mod, 'Z'] },
     { label: 'Write tags', keys: [mod, 'S'] },
     { label: 'Play reference chord', keys: ['K'] },
     { label: 'Remove from library', keys: [mod, 'Backspace'] },
@@ -154,7 +155,13 @@ export function NameDialog(props: {
   const count = props.rows.length;
   return (
     <Modal title={count === 1 ? 'Name this beat' : `Name ${count} beats`} onClose={props.onClose} wide initialFocus="#name-apply">
-      <p className="muted">A preview of names that are not already in the library. Reroll anything that does not fit, then apply. You can undo afterward.</p>
+      <p className="muted">These change the title in Prep Station only. File names on disk stay the same. The new title goes into the file's tags only when you choose Write tags to file.</p>
+      <div className="name-captions" aria-hidden="true">
+        <span>Now</span>
+        <span />
+        <span>New title</span>
+        <span />
+      </div>
       <ol className="name-list">
         {props.rows.map((row) => (
           <li key={row.id} className="name-row">

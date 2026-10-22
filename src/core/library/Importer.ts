@@ -16,19 +16,33 @@ export type ImportResult = {
   needsDecode: string[];
   /** File index for each id in `needsDecode`, in the same order. */
   decodeAt: number[];
+  /** Beats that were added, but whose key and BPM could not be measured. */
+  unanalyzed: string[];
+  cancelled: boolean;
 };
 
 export class Importer {
-  static async importPaths(store: LibraryStore, inputs: string[], onTick?: (tick: ImportTick) => void): Promise<ImportResult> {
+  static async importPaths(
+    store: LibraryStore,
+    inputs: string[],
+    onTick?: (tick: ImportTick) => void,
+    shouldCancel?: () => boolean,
+  ): Promise<ImportResult> {
     const files = await AudioFiles.collect(inputs);
     const settings = store.getSettings();
     const imported: Beat[] = [];
     const failed: { filePath: string; message: string }[] = [];
     const needsDecode: string[] = [];
     const decodeAt: number[] = [];
+    const unanalyzed: string[] = [];
     let duplicates = 0;
+    let cancelled = false;
     const total = files.length;
     for (let index = 0; index < files.length; index += 1) {
+      if (shouldCancel?.()) {
+        cancelled = true;
+        break;
+      }
       const filePath = files[index];
       onTick?.({ phase: 'loading', index, total });
       await new Promise((resolve) => setImmediate(resolve));
@@ -40,7 +54,7 @@ export class Importer {
       try {
         const format = AudioFiles.formatOf(filePath);
         if (format === 'wav' || format === 'aiff') onTick?.({ phase: 'analyzing', index, total });
-        const beat = await this.importOne(store, filePath, settings);
+        const beat = await this.importOne(store, filePath, settings, unanalyzed);
         imported.push(beat);
         const decode = beat.format === 'mp3' || beat.format === 'flac';
         if (decode) {
@@ -53,10 +67,10 @@ export class Importer {
         onTick?.({ phase: 'settled', index, total, needsDecode: false });
       }
     }
-    return { imported, duplicates, failed, needsDecode, decodeAt };
+    return { imported, duplicates, failed, needsDecode, decodeAt, unanalyzed, cancelled };
   }
 
-  private static async importOne(store: LibraryStore, filePath: string, settings: Settings): Promise<Beat> {
+  private static async importOne(store: LibraryStore, filePath: string, settings: Settings, unanalyzed: string[]): Promise<Beat> {
     const format = AudioFiles.formatOf(filePath);
     if (!format) throw new Error('Unsupported file.');
     const stat = await fs.promises.stat(filePath);
@@ -87,8 +101,12 @@ export class Importer {
     }
     let beat = store.add(created);
     if (format === 'wav' || format === 'aiff') {
-      const decoded = PcmDecoder.decode(new Uint8Array(await fs.promises.readFile(filePath)));
-      beat = store.applyAnalysis(beat.id, TrackAnalyzer.analyze(decoded.samples, decoded.sampleRate));
+      try {
+        const decoded = PcmDecoder.decode(new Uint8Array(await fs.promises.readFile(filePath)));
+        beat = store.applyAnalysis(beat.id, TrackAnalyzer.analyze(decoded.samples, decoded.sampleRate));
+      } catch {
+        unanalyzed.push(path.basename(filePath));
+      }
     }
     const sidecar = await this.sidecarJpeg(filePath);
     if (sidecar) beat = store.setArtwork(beat.id, sidecar.bytes, sidecar.width, sidecar.height);

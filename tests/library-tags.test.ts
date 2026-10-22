@@ -159,6 +159,51 @@ describe('Library', () => {
     expect(KeyChoice.working(locked).name).toBe('F# minor');
     const duplicate = await Importer.importPaths(store, [filePath]);
     expect(duplicate.duplicates).toBe(1);
+    expect(duplicate.unanalyzed).toEqual([]);
+    expect(duplicate.cancelled).toBe(false);
+  });
+
+  it('keeps a beat whose audio cannot be analyzed and names the file', async () => {
+    const dir = tempDir();
+    const filePath = path.join(dir, 'Broken Bounce.wav');
+    fs.writeFileSync(filePath, Buffer.from('not a wav'));
+    const store = new LibraryStore(path.join(dir, 'library'));
+    const result = await Importer.importPaths(store, [filePath]);
+    expect(result.imported).toHaveLength(1);
+    expect(result.failed).toEqual([]);
+    expect(result.unanalyzed).toEqual(['Broken Bounce.wav']);
+    expect(store.list()).toHaveLength(1);
+    expect(store.list()[0].title).toBe('Broken Bounce');
+  });
+
+  it('stops before the next file when cancelled', async () => {
+    const dir = tempDir();
+    const encoded = PcmDecoder.encodeWav(ReferenceAudio.clicks({ bpm: 100, seconds: 0.2 }), 44100);
+    const first = path.join(dir, 'A.wav');
+    const second = path.join(dir, 'B.wav');
+    fs.writeFileSync(first, encoded);
+    fs.writeFileSync(second, encoded);
+    const store = new LibraryStore(path.join(dir, 'library'));
+    let seen = 0;
+    const result = await Importer.importPaths(store, [first, second], () => { seen += 1; }, () => seen > 0);
+    expect(result.cancelled).toBe(true);
+    expect(result.imported).toHaveLength(1);
+    expect(store.list()).toHaveLength(1);
+  });
+
+  it('restores a title without forcing the tags-dirty flag', async () => {
+    const dir = tempDir();
+    const filePath = path.join(dir, 'Plain.wav');
+    fs.writeFileSync(filePath, PcmDecoder.encodeWav(ReferenceAudio.clicks({ bpm: 100, seconds: 0.2 }), 44100));
+    const store = new LibraryStore(path.join(dir, 'library'));
+    const imported = await Importer.importPaths(store, [filePath]);
+    const beat = imported.imported[0];
+    expect(store.clearTagsDirty(beat.id).tagsDirty).toBe(false);
+    store.update(beat.id, { title: 'Velvet Room' });
+    expect(store.get(beat.id)?.tagsDirty).toBe(true);
+    const restored = store.restoreTitle(beat.id, beat.title, false);
+    expect(restored.title).toBe(beat.title);
+    expect(restored.tagsDirty).toBe(false);
   });
 
   it('filters, sorts, validates, and exports CSV', () => {

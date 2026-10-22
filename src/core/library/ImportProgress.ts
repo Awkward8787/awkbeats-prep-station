@@ -5,8 +5,10 @@ export type ImportSnapshot = {
   /** Tracks fully finished (loaded, and analyzed when this pass measures them). */
   done: number;
   total: number;
-  /** Index into the status lines. Moves only when a real step changes. */
+  /** Kept at 0. The decorative line is chosen by elapsed time, not by steps. */
   line: number;
+  /** File indexes that have already counted toward `done`. */
+  finished: number[];
 };
 
 export type ImportTick = {
@@ -26,88 +28,91 @@ export type ImportRun = {
 export class ImportProgress {
   static readonly lines = [
     'Finding the pocket',
-    'Checking the kick against the snare',
-    'Listening for the key, not the guess',
     'Counting the bars out loud',
-    'Leaving a little room in the hats',
-    'Letting the 808 sit in the floor',
+    'Tapping along to the kick',
     'Marking the tempo on the one',
-    'Keeping the low end honest',
-    'Giving the loop one more pass',
-    'Parking the vocal chop for later',
+    'Humming the root note',
     'Checking the swing, then the key',
-    'Making sure the drop has a home',
+    'Major or minor? Checking',
+    'Reading the tags you already wrote',
     'Reading the waveform like a chart',
-    'Saving headroom for the mix',
-    'Asking the snare if it means it',
-    'Lining the clap up with the kick',
-    'Giving the bass its own lane',
-    'Turning the monitors down a notch',
+    'Lining up the Camelot code',
   ] as const;
 
   static start(total: number, phase: ImportPhase = 'loading'): ImportSnapshot {
-    return { phase, done: 0, total: this.safeTotal(total), line: 0 };
+    return { phase, done: 0, total: this.safeTotal(total), line: 0, finished: [] };
   }
 
   static begin(total: number, phase: ImportPhase = 'loading'): ImportRun {
     return { snapshot: this.start(total, phase), pending: [] };
   }
 
-  /**
-   * Record a real step. The status line advances only when the phase or the
-   * finished count changes.
-   */
-  static step(snapshot: ImportSnapshot, phase: ImportPhase, done: number): ImportSnapshot {
-    const nextDone = Math.max(0, Math.min(snapshot.total, Math.floor(done)));
-    const moved = phase !== snapshot.phase || nextDone !== snapshot.done;
-    return {
-      phase,
-      done: nextDone,
-      total: snapshot.total,
-      line: moved ? snapshot.line + 1 : snapshot.line,
-    };
+  /** One finished file. A repeated index does not move `done`. Phase ticks never call this. */
+  static complete(snapshot: ImportSnapshot, index: number): ImportSnapshot {
+    return this.finish(snapshot, index, snapshot.phase);
   }
 
   static apply(run: ImportRun, tick: ImportTick): ImportRun {
     const base = tick.total === run.snapshot.total ? run : this.begin(tick.total);
     if (tick.phase === 'settled') {
-      if (tick.needsDecode) return { snapshot: base.snapshot, pending: [...base.pending, tick.index] };
-      return { snapshot: this.step(base.snapshot, 'analyzing', tick.index + 1), pending: base.pending };
+      if (tick.needsDecode) {
+        return { snapshot: { ...base.snapshot, phase: 'analyzing' }, pending: [...base.pending, tick.index] };
+      }
+      return { snapshot: this.finish(base.snapshot, tick.index, 'analyzing'), pending: base.pending };
     }
-    return { snapshot: this.step(base.snapshot, tick.phase, tick.index), pending: base.pending };
+    return { snapshot: { ...base.snapshot, phase: tick.phase }, pending: base.pending };
   }
 
-  static decodeStart(run: ImportRun, index: number): ImportRun {
-    return { snapshot: this.step(run.snapshot, 'analyzing', index), pending: run.pending };
+  static decodeStart(run: ImportRun, _index: number): ImportRun {
+    return { snapshot: { ...run.snapshot, phase: 'analyzing' }, pending: run.pending };
   }
 
   static decodeFinish(run: ImportRun, index: number): ImportRun {
-    return { snapshot: this.step(run.snapshot, 'analyzing', index + 1), pending: run.pending };
+    return { snapshot: this.finish(run.snapshot, index, 'analyzing'), pending: run.pending };
   }
 
-  /** Share of the bar. A track in progress fills part of its slot; only a finished track fills it. */
+  /** Share of the bar. Only a finished file fills its slot, so the value cannot move backward. */
   static fraction(snapshot: ImportSnapshot): number {
-    if (snapshot.total <= 0) return 0;
-    if (snapshot.done >= snapshot.total) return 1;
-    const partial = snapshot.phase === 'analyzing' ? 0.62 : 0.28;
-    return (snapshot.done + partial) / snapshot.total;
+    return snapshot.total > 0 ? snapshot.done / snapshot.total : 0;
   }
 
-  /** "2 of 12" for the track currently in progress, or the finished count when the run is done. */
+  /** Finished count, never the file currently in progress. */
   static countLabel(snapshot: ImportSnapshot): string {
-    if (snapshot.total <= 0) return '0 of 0';
-    const shown = snapshot.done >= snapshot.total ? snapshot.total : snapshot.done + 1;
-    return `${shown} of ${snapshot.total}`;
+    return `${snapshot.done} of ${snapshot.total}`;
   }
 
   static phaseLabel(phase: ImportPhase): string {
     return phase === 'loading' ? 'Loading' : 'Analyzing key and BPM';
   }
 
-  static statusLine(line: number): string {
-    const count = this.lines.length;
-    const index = ((Math.floor(line) % count) + count) % count;
+  /**
+   * Decorative line. Hidden until the run has lasted 1.5s, then a new line at most
+   * every 3s. After one pass, returns null so the UI shows the phase label only.
+   */
+  static spokenLine(elapsedMs: number): string | null {
+    if (!Number.isFinite(elapsedMs) || elapsedMs < 1500) return null;
+    const index = Math.floor((elapsedMs - 1500) / 3000);
+    if (index < 0 || index >= this.lines.length) return null;
     return this.lines[index];
+  }
+
+  /**
+   * Screen-reader text. Stable inside a 25% bucket so the live region does not
+   * speak on every file: the start, each quarter, and the end.
+   */
+  static milestone(snapshot: ImportSnapshot): string {
+    const { done, total } = snapshot;
+    if (total <= 0) return '0 of 0';
+    if (done >= total) return `${done} of ${total} done`;
+    const quarter = Math.floor((done / total) * 4);
+    if (quarter <= 0) return `Importing ${total} files`;
+    return `${quarter * 25}% imported, ${done} of ${total} done`;
+  }
+
+  private static finish(snapshot: ImportSnapshot, index: number, phase: ImportPhase): ImportSnapshot {
+    if (snapshot.finished.includes(index)) return { ...snapshot, phase };
+    const finished = [...snapshot.finished, index];
+    return { ...snapshot, phase, finished, done: Math.min(snapshot.total, finished.length) };
   }
 
   private static safeTotal(total: number): number {

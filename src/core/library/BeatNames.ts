@@ -83,6 +83,27 @@ export class BeatNames {
     return rows.map((row) => ({ id: row.id, title: row.from }));
   }
 
+  /**
+   * Restore a title only when the row still shows the name this pass applied.
+   * A later edit is skipped and reported by its current title.
+   */
+  static restorePlan(
+    rows: { id: string; from: string; to: string; tagsDirty: boolean }[],
+    current: { id: string; title: string }[],
+  ): { restore: { id: string; title: string; tagsDirty: boolean }[]; skipped: string[] } {
+    const restore: { id: string; title: string; tagsDirty: boolean }[] = [];
+    const skipped: string[] = [];
+    for (const row of rows) {
+      const beat = current.find((item) => item.id === row.id);
+      if (!beat || beat.title !== row.to) {
+        skipped.push(beat?.title || row.to);
+        continue;
+      }
+      restore.push({ id: row.id, title: row.from, tagsDirty: row.tagsDirty });
+    }
+    return { restore, skipped };
+  }
+
   private static pairs(): string[] {
     const names: string[] = [];
     for (const mood of this.moods) {

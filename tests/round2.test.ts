@@ -29,6 +29,19 @@ describe('ShortcutGuard', () => {
     expect(ShortcutGuard.controlOwnsKey(button, 'k')).toBe(false);
     expect(ShortcutGuard.controlOwnsKey(new FakeTarget([]), ' ')).toBe(false);
   });
+
+  it('lets Cmd or Ctrl shortcuts through a focused row, button, or grid', () => {
+    const button = new FakeTarget(['button']);
+    const row = new FakeTarget(['[role="row"]']);
+    const grid = new FakeTarget(['[role="grid"]']);
+    expect(ShortcutGuard.controlOwnsKey(button, 'Enter', true)).toBe(false);
+    expect(ShortcutGuard.controlOwnsKey(button, ' ', true)).toBe(false);
+    expect(ShortcutGuard.controlOwnsKey(row, 'Enter')).toBe(true);
+    expect(ShortcutGuard.controlOwnsKey(row, 'Enter', true)).toBe(false);
+    expect(ShortcutGuard.controlOwnsKey(row, ' ', true)).toBe(false);
+    expect(ShortcutGuard.controlOwnsKey(grid, ' ')).toBe(false);
+    expect(ShortcutGuard.controlOwnsKey(grid, 'Enter')).toBe(false);
+  });
 });
 
 describe('PlaybackSpan', () => {
