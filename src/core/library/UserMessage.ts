@@ -37,6 +37,11 @@ export class UserMessage {
     return `Stopped after ${done} of ${total}. ${imported} ${noun} imported.${rest}`;
   }
 
+  /** A stop that left beats unanalyzed stays up until dismissed. */
+  static stoppedTone(pendingAnalysis: number): 'ok' | 'look' {
+    return pendingAnalysis > 0 ? 'look' : 'ok';
+  }
+
   static namesRestoredSome(skipped: string[]): string {
     return `Names restored. Left unchanged: ${skipped.join(', ')}.`;
   }
