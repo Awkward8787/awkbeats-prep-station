@@ -13,6 +13,7 @@ extraResources:
   - from: build/logo.png
     to: logo.png
 asar: true
+afterPack: scripts/ad-hoc-sign-mac.js
 mac:
   category: public.app-category.music
   icon: build/icon.icns
