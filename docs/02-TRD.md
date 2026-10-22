@@ -142,7 +142,7 @@ No secret is required to build or run the unsigned app. Signing secrets are owne
 | `WIN_CSC_LINK` / `WIN_CSC_KEY_PASSWORD` | Windows-specific override | Optional | Unset | GitHub Actions secret | electron-builder | Same |
 | `APPLE_API_KEY`, `APPLE_API_KEY_ID`, `APPLE_API_ISSUER`, `APPLE_TEAM_ID` | Notarization | Optional | Unset | GitHub Actions secret | electron-builder notarize | Rotate the API key in App Store Connect |
 | `CSC_IDENTITY_AUTO_DISCOVERY` | Stop the builder from grabbing a random local cert | Set to `false` in CI | false in the workflow | `.github/workflows/installers.yml` | electron-builder | Leave false until a signing job exists |
-| `GITHUB_TOKEN` | Default Actions token | Present on Actions | — | GitHub | Not read by app code. `publish: null` and `--publish never` stop electron-builder from creating a Release | GitHub rotates it |
+| `GITHUB_TOKEN` | Default Actions token | Present on Actions | — | GitHub | Not read by app code. `publish: null` and `--publish never` keep electron-builder from publishing. `.github/workflows/release.yml` uses the token only to attach installers to a `v*` Release | GitHub rotates it |
 
 There is no `.env` file. Do not add signing material to one.
 
@@ -153,7 +153,7 @@ No payment, email, auth, analytics, storage, CDN, or AI API is called.
 | Integration | Account | Endpoints | Auth | Failure |
 | --- | --- | --- | --- | --- |
 | awkbeats.com | The owner's site. Account ID UNCONFIRMED. | `https://awkbeats.com` via `shell.openExternal` when the brand control is activated | None | OS browser handles failure. The library still works. |
-| GitHub Actions | Repo Awkward8787/awkbeats-prep-station | Workflow artifacts only | GitHub permissions: `contents: read` | Installer job fails if `release/*.dmg` or `release/*.exe` is missing |
+| GitHub Actions | Repo Awkward8787/awkbeats-prep-station | Workflow artifacts on branch pushes. GitHub Releases on `v*` tags | Branch workflow `contents: read`. Release workflow `contents: write` | Installer job fails if `release/*.dmg` or `release/*.exe` is missing |
 | music-metadata, node-id3 | npm packages, not accounts | Local function calls | None | Tag read/write throws; UI shows the tag-failed message or the import failure count |
 
 Sandbox versus production: not applicable. There is one build.
@@ -263,6 +263,8 @@ Both pass `--publish never`. CI (`.github/workflows/installers.yml`) runs test, 
 - `AwkBeats-Prep-Station-Windows` from `release/*.exe`
 
 `if-no-files-found: error`. Permissions are `contents: read`. `publish: null` in `electron-builder.yml`.
+
+A push of a tag matching `v*` runs `.github/workflows/release.yml` instead of the branch artifact workflow. It builds the same unsigned installers (`dist:mac` is still arm64, then x64) and attaches the two disk images and the NSIS exe to that tag's GitHub Release with `softprops/action-gh-release`. The token is `GITHUB_TOKEN` with `contents: write`. No signing secrets are set. The notes file is `.github/release-notes.md`. The workflow refuses to create a tag; the tag must already exist.
 
 There is no cache to purge and no server to roll back. Rollback of an installed copy is the OS uninstall plus installing the previous artifact. Rollback of the repo is `git revert`.
 
