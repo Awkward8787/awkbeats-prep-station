@@ -2,6 +2,7 @@ import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { SquareCrop } from '@core/library/SquareCrop';
 import { UserMessage } from '@core/library/UserMessage';
 import { BEAT_STATUSES, BeatCatalog, BeatStatusLabel, type BatchPatch, type Settings } from '@core/library/types';
+import { CheckBox } from './CheckBox';
 
 export function SettingsDialog(props: { settings: Settings; onClose: () => void; onSave: (patch: Partial<Settings>) => void }) {
   const [producerName, setProducerName] = useState(props.settings.producerName);
@@ -21,15 +22,12 @@ export function SettingsDialog(props: { settings: Settings; onClose: () => void;
         <span className="faint">{'{year}'} and {'{producer}'} are replaced when a beat is imported. If the producer name is empty, the copyright line stays blank.</span>
       </div>
       <div className="field">
-        <label className="check-row" htmlFor="credit-composer">
-          <input
-            id="credit-composer"
-            type="checkbox"
-            checked={creditProducerAsComposer}
-            onChange={(event) => setCreditProducerAsComposer(event.target.checked)}
-          />
-          Also credit producer as composer
-        </label>
+        <CheckBox
+          id="credit-composer"
+          checked={creditProducerAsComposer}
+          onChange={(checked) => setCreditProducerAsComposer(checked)}
+          label="Also credit producer as composer"
+        />
         <span className="faint">Off writes the producer tag only. On also writes the composer tag.</span>
       </div>
       <div className="field">
@@ -56,6 +54,7 @@ export function ShortcutsDialog(props: { onClose: () => void }) {
     { label: 'Import a folder', keys: [mod, 'Shift', 'I'] },
     { label: 'Export catalog', keys: [mod, 'E'] },
     { label: 'Re-analyze', keys: [mod, 'Enter'] },
+    { label: 'Undo names', keys: [mod, 'Z'] },
     { label: 'Write tags', keys: [mod, 'S'] },
     { label: 'Play reference chord', keys: ['K'] },
     { label: 'Remove from library', keys: [mod, 'Backspace'] },
@@ -141,6 +140,42 @@ export function BatchDialog(props: { count: number; onClose: () => void; onApply
           if (tags.trim()) patch.addTags = tags.split(',').map((tag) => tag.trim()).filter(Boolean);
           props.onApply(patch);
         }}>Apply</button>
+      </div>
+    </Modal>
+  );
+}
+
+export function NameDialog(props: {
+  rows: { id: string; from: string; to: string }[];
+  onReroll: () => void;
+  onRerollOne: (id: string) => void;
+  onClose: () => void;
+  onApply: () => void;
+}) {
+  const count = props.rows.length;
+  return (
+    <Modal title={count === 1 ? 'Name this beat' : `Name ${count} beats`} onClose={props.onClose} wide initialFocus="#name-apply">
+      <p className="muted">These change the title in Prep Station only. File names on disk stay the same. The new title goes into the file's tags only when you choose Write tags to file.</p>
+      <div className="name-captions" aria-hidden="true">
+        <span>Now</span>
+        <span />
+        <span>New title</span>
+        <span />
+      </div>
+      <ol className="name-list">
+        {props.rows.map((row) => (
+          <li key={row.id} className="name-row">
+            <span className="name-from" title={row.from}>{row.from}</span>
+            <span className="name-arrow" aria-hidden="true">→</span>
+            <span className="name-to" title={row.to}>{row.to}</span>
+            <button className="btn btn-ghost" type="button" onClick={() => props.onRerollOne(row.id)} aria-label={`Reroll name for ${row.from}`}>Reroll</button>
+          </li>
+        ))}
+      </ol>
+      <div className="modal-actions">
+        <button className="btn" type="button" onClick={props.onClose}>Cancel</button>
+        <button className="btn" type="button" onClick={props.onReroll}>Reroll all</button>
+        <button id="name-apply" className="btn btn-primary" type="button" onClick={props.onApply} disabled={!props.rows.length}>Apply names</button>
       </div>
     </Modal>
   );

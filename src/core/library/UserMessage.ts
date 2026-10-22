@@ -10,13 +10,34 @@ export class UserMessage {
   static readonly removeTitle = 'Remove from library';
   static readonly removeBody = 'Remove the selected beats from the library? The audio files stay on disk.';
   static readonly analyzeIdle = 'Analyze to measure tempo, key, and the waveform.';
+  static readonly nothingToImport = 'No audio files found.';
+  static readonly namesApplied = 'Titles updated in the library. Files are unchanged until you write tags.';
+  static readonly namesRestored = 'Names restored.';
+  static readonly namesFailed = 'Not enough unique beat names are left.';
   static readonly cropUpscale = 'This image is smaller than 3000×3000. Exporting at 3000 will upscale it.';
 
-  static imported(count: number, duplicates: number, failed: number): string {
+  static imported(count: number, duplicates: number, failed: number, unanalyzed: string[] = []): string {
     const noun = count === 1 ? 'beat' : 'beats';
     const parts = [`Imported ${count} ${noun}.`];
     if (duplicates) parts.push(`${duplicates} already in the library.`);
     if (failed) parts.push(`${failed} could not be read.`);
+    const missed = this.unanalyzed(unanalyzed);
+    if (missed) parts.push(missed);
     return parts.join(' ');
+  }
+
+  static unanalyzed(names: string[]): string {
+    if (!names.length) return '';
+    return `${names.length} couldn't be analyzed: ${names.join(', ')}. Check they play in another app, then choose Re-analyze.`;
+  }
+
+  static stopped(done: number, total: number, imported: number, pendingAnalysis = 0): string {
+    const noun = imported === 1 ? 'beat' : 'beats';
+    const rest = pendingAnalysis ? ` ${pendingAnalysis} still need key and BPM. Select them and choose Re-analyze.` : '';
+    return `Stopped after ${done} of ${total}. ${imported} ${noun} imported.${rest}`;
+  }
+
+  static namesRestoredSome(skipped: string[]): string {
+    return `Names restored. Left unchanged: ${skipped.join(', ')}.`;
   }
 }

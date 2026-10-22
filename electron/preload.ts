@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer, webUtils } from 'electron';
 import type { ImportResult } from '../src/core/library/Importer';
+import type { ImportTick } from '../src/core/library/ImportProgress';
 import type { AnalysisResult, BatchPatch, Beat, Settings, UserPatch } from '../src/core/library/types';
 
 export type PrepApi = {
@@ -7,9 +8,13 @@ export type PrepApi = {
   settings: () => Promise<Settings>;
   updateSettings: (patch: Partial<Settings>) => Promise<Settings>;
   importPaths: (paths: string[]) => Promise<ImportResult>;
+  cancelImport: () => Promise<void>;
+  collectPaths: (paths: string[]) => Promise<string[]>;
+  onImportProgress: (callback: (tick: ImportTick) => void) => () => void;
   pickAudio: () => Promise<string[]>;
   pickFolder: () => Promise<string | null>;
   updateBeat: (id: string, patch: UserPatch) => Promise<{ beat: Beat } | { error: string }>;
+  restoreTitle: (id: string, title: string, tagsDirty: boolean) => Promise<{ beat: Beat } | { error: string }>;
   batchUpdate: (ids: string[], patch: BatchPatch) => Promise<Beat[]>;
   remove: (ids: string[]) => Promise<Beat[]>;
   analyze: (ids: string[]) => Promise<{ beats: Beat[]; needsDecode: string[]; errors: { id: string; message: string }[] }>;
@@ -33,9 +38,17 @@ const prep: PrepApi = {
   settings: () => ipcRenderer.invoke('settings:get'),
   updateSettings: (patch: Partial<Settings>) => ipcRenderer.invoke('settings:update', patch),
   importPaths: (paths: string[]) => ipcRenderer.invoke('library:import', paths),
+  cancelImport: () => ipcRenderer.invoke('library:cancel-import'),
+  collectPaths: (paths: string[]) => ipcRenderer.invoke('library:collect', paths),
+  onImportProgress: (callback) => {
+    const listener = (_event: Electron.IpcRendererEvent, tick: ImportTick) => callback(tick);
+    ipcRenderer.on('import-progress', listener);
+    return () => ipcRenderer.removeListener('import-progress', listener);
+  },
   pickAudio: () => ipcRenderer.invoke('dialog:audio'),
   pickFolder: () => ipcRenderer.invoke('dialog:folder'),
   updateBeat: (id: string, patch: UserPatch) => ipcRenderer.invoke('beat:update', id, patch),
+  restoreTitle: (id: string, title: string, tagsDirty: boolean) => ipcRenderer.invoke('beat:restore-title', id, title, tagsDirty),
   batchUpdate: (ids: string[], patch: BatchPatch) => ipcRenderer.invoke('beat:batch', ids, patch),
   remove: (ids: string[]) => ipcRenderer.invoke('beat:remove', ids),
   analyze: (ids: string[]) => ipcRenderer.invoke('beat:analyze', ids),

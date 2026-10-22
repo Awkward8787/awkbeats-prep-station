@@ -1,11 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import logoUrl from '../../build/logo.png';
 import { TrackAnalyzer } from '@core/analysis/TrackAnalyzer';
+import { BeatNames } from '@core/library/BeatNames';
 import { BeatQuery } from '@core/library/BeatRules';
+import { ImportProgress, type ImportRun, type ImportSnapshot } from '@core/library/ImportProgress';
 import { UserMessage } from '@core/library/UserMessage';
 import { BEAT_STATUSES, KeyChoice, type Beat, type LibraryFilters, type Settings, type SortDirection, type SortKey } from '@core/library/types';
 import { WebAudioDecode } from './decode';
-import { CropDialog, ShortcutsDialog, SettingsDialog, BatchDialog, ConfirmDialog, ProducerDialog } from './dialogs';
+import { CropDialog, ShortcutsDialog, SettingsDialog, BatchDialog, ConfirmDialog, NameDialog, ProducerDialog } from './dialogs';
+import { ImportBar } from './ImportBar';
 import { Inspector } from './Inspector';
 import { KeyPreview } from './KeyPreview';
 import { ShortcutGuard } from './ShortcutGuard';
@@ -31,10 +34,14 @@ type Dialog =
   | { type: 'settings' }
   | { type: 'shortcuts' }
   | { type: 'batch' }
+  | { type: 'names'; rows: { id: string; from: string; to: string }[] }
   | { type: 'remove' }
   | { type: 'crop'; src: string; name: string };
 
-type ToastItem = { id: number; text: string; tone: 'ok' | 'error' };
+type ToastAction = { label: string; run: () => void };
+type ToastTone = 'ok' | 'error' | 'look';
+type ToastItem = { id: number; text: string; tone: ToastTone; action?: ToastAction };
+type NameUndoRow = { id: string; from: string; to: string; tagsDirty: boolean; appliedAt: string };
 
 export function App() {
   const [beats, setBeats] = useState<Beat[]>([]);
@@ -48,15 +55,16 @@ export function App() {
   const [dialog, setDialog] = useState<Dialog>(null);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const [busy, setBusy] = useState<string[]>([]);
-  const [job, setJob] = useState<{ total: number } | null>(null);
+  const [job, setJob] = useState<ImportSnapshot | null>(null);
   const [dragOver, setDragOver] = useState(false);
   const [playing, setPlaying] = useState(false);
   const dragDepth = useRef(0);
 
-  const toast = useCallback((text: string, tone: 'ok' | 'error' = 'ok') => {
+  const toast = useCallback((text: string, tone: ToastTone = 'ok', options?: { action?: ToastAction; ms?: number }) => {
     const id = Date.now() + Math.random();
-    setToasts((current) => [...current, { id, text, tone }]);
-    if (tone === 'ok') window.setTimeout(() => setToasts((current) => current.filter((item) => item.id !== id)), 4000);
+    setToasts((current) => [...current, { id, text, tone, action: options?.action }]);
+    if (tone === 'ok') window.setTimeout(() => setToasts((current) => current.filter((item) => item.id !== id)), options?.ms ?? 4000);
+    return id;
   }, []);
 
   const replace = useCallback((beat: Beat) => {
@@ -67,48 +75,150 @@ export function App() {
     setBeats(await window.prep.list());
   }, []);
 
+  const runGuard = useRef(false);
+  const runRef = useRef<ImportRun | null>(null);
+  const stopRef = useRef(false);
+  const nameUndoRef = useRef<NameUndoRow[] | null>(null);
+  const undoToastId = useRef<number | null>(null);
+  /** Negative while the bar is owned by the React import loop, so a late tick cannot reopen it. */
+  const progressGate = useRef(0);
+
+  const stopImport = useCallback(() => {
+    stopRef.current = true;
+    void window.prep.cancelImport();
+  }, []);
+
+  useEffect(() => {
+    return window.prep.onImportProgress((tick) => {
+      if (progressGate.current < 0) return;
+      const base = runRef.current && runRef.current.snapshot.total === tick.total ? runRef.current : ImportProgress.begin(tick.total);
+      const next = ImportProgress.apply(base, tick);
+      if (progressGate.current < 0) return;
+      runRef.current = next;
+      setJob(next.snapshot);
+    });
+  }, []);
+
+  const readAnalysis = useCallback(
+    async (id: string, known?: Beat[]): Promise<{ ok: boolean; fileName: string } | null> => {
+      const beat = (known || beats).find((item) => item.id === id) || (await window.prep.list()).find((item) => item.id === id);
+      if (!beat) return null;
+      try {
+        const bytes = new Uint8Array(await window.prep.readAudio(id));
+        const decoded = await WebAudioDecode.decode(bytes, beat.format);
+        const analysis = TrackAnalyzer.analyze(decoded.samples, decoded.sampleRate);
+        const saved = await window.prep.submitAnalysis(id, analysis);
+        if ('beat' in saved && saved.beat) {
+          replace(saved.beat);
+          return { ok: true, fileName: beat.fileName };
+        }
+        return { ok: false, fileName: beat.fileName };
+      } catch {
+        return { ok: false, fileName: beat.fileName };
+      }
+    },
+    [beats, replace],
+  );
+
   const analyzeIds = useCallback(
     async (ids: string[]) => {
       const unique = [...new Set(ids)];
-      if (!unique.length) return;
-      setBusy((current) => [...new Set([...current, ...unique])]);
-      setJob({ total: unique.length });
+      if (!unique.length || runGuard.current) return;
+      runGuard.current = true;
+      stopRef.current = false;
+      progressGate.current = -1;
+      let snapshot = ImportProgress.start(unique.length, 'analyzing');
+      setJob(snapshot);
+      setBusy(unique);
+      const missed: string[] = [];
       try {
-        const local = await window.prep.analyze(unique);
-        setBeats(local.beats);
-        for (const id of local.needsDecode) {
-          const beat = local.beats.find((item) => item.id === id);
-          if (!beat) continue;
-          try {
-            const bytes = new Uint8Array(await window.prep.readAudio(id));
-            const decoded = await WebAudioDecode.decode(bytes, beat.format);
-            const analysis = TrackAnalyzer.analyze(decoded.samples, decoded.sampleRate);
-            const saved = await window.prep.submitAnalysis(id, analysis);
-            if ('beat' in saved && saved.beat) replace(saved.beat);
-            else if ('error' in saved && saved.error) toast(saved.error, 'error');
-          } catch {
-            toast(`Couldn't read ${beat.fileName}. Check that the file plays in another app, then choose Re-analyze.`, 'error');
+        for (let index = 0; index < unique.length; index += 1) {
+          if (stopRef.current) break;
+          const id = unique[index];
+          snapshot = { ...snapshot, phase: 'analyzing' };
+          setJob(snapshot);
+          setBusy(unique.slice(index));
+          const local = await window.prep.analyze([id]);
+          setBeats(local.beats);
+          if (local.needsDecode.includes(id)) {
+            const read = await readAnalysis(id, local.beats);
+            if (read && !read.ok) missed.push(read.fileName);
           }
+          for (const error of local.errors) {
+            const beat = local.beats.find((item) => item.id === error.id);
+            missed.push(beat?.fileName || id);
+          }
+          snapshot = ImportProgress.complete(snapshot, index);
+          setJob(snapshot);
         }
-        for (const error of local.errors) toast(error.message, 'error');
+        if (stopRef.current) toast(`Stopped after ${snapshot.done} of ${snapshot.total}.`);
+        else if (missed.length) toast(UserMessage.unanalyzed(missed), 'look');
+        if (!stopRef.current && snapshot.done >= snapshot.total) {
+          await new Promise((resolve) => setTimeout(resolve, 400));
+        }
       } finally {
-        setBusy((current) => current.filter((id) => !unique.includes(id)));
+        runGuard.current = false;
+        setBusy([]);
         setJob(null);
       }
     },
-    [replace, toast],
+    [readAnalysis, toast],
   );
 
   const importPaths = useCallback(
     async (paths: string[]) => {
-      if (!paths.length) return;
-      const result = await window.prep.importPaths(paths);
-      await refresh();
-      toast(UserMessage.imported(result.imported.length, result.duplicates, result.failed.length));
-      if (result.failed.length) toast(result.failed[0].message, 'error');
-      await analyzeIds(result.needsDecode);
+      if (!paths.length || runGuard.current) return;
+      const files = await window.prep.collectPaths(paths);
+      if (!files.length) {
+        toast(UserMessage.nothingToImport);
+        return;
+      }
+      runGuard.current = true;
+      stopRef.current = false;
+      progressGate.current = 1;
+      runRef.current = ImportProgress.begin(files.length);
+      setJob(runRef.current.snapshot);
+      try {
+        const result = await window.prep.importPaths(files);
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        progressGate.current = -1;
+        await refresh();
+        let run = runRef.current ?? ImportProgress.begin(files.length);
+        const unanalyzed = [...result.unanalyzed];
+        let decodedSoFar = 0;
+        for (let slot = 0; slot < result.needsDecode.length; slot += 1) {
+          if (stopRef.current) break;
+          const index = result.decodeAt[slot] ?? slot;
+          run = ImportProgress.decodeStart(run, index);
+          runRef.current = run;
+          setJob(run.snapshot);
+          setBusy([result.needsDecode[slot]]);
+          const read = await readAnalysis(result.needsDecode[slot]);
+          if (read && !read.ok) unanalyzed.push(read.fileName);
+          run = ImportProgress.decodeFinish(run, index);
+          runRef.current = run;
+          setJob(run.snapshot);
+          decodedSoFar += 1;
+        }
+        const pendingAnalysis = result.needsDecode.length - decodedSoFar;
+        if (stopRef.current || result.cancelled) {
+          toast(UserMessage.stopped(run.snapshot.done, run.snapshot.total, result.imported.length, pendingAnalysis));
+        } else {
+          const problems = result.failed.length + unanalyzed.length;
+          toast(UserMessage.imported(result.imported.length, result.duplicates, result.failed.length, unanalyzed), problems ? 'look' : 'ok');
+        }
+        if (!stopRef.current && !result.cancelled && run.snapshot.done >= run.snapshot.total) {
+          await new Promise((resolve) => setTimeout(resolve, 400));
+        }
+      } finally {
+        progressGate.current = -1;
+        runRef.current = null;
+        runGuard.current = false;
+        setBusy([]);
+        setJob(null);
+      }
     },
-    [analyzeIds, refresh, toast],
+    [readAnalysis, refresh, toast],
   );
 
   const writeTags = useCallback(async (ids: string[]) => {
@@ -185,14 +295,14 @@ export function App() {
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
-      const typing = target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT' || target.isContentEditable);
+      const typing = ShortcutGuard.typingTarget(target);
       const mod = event.metaKey || event.ctrlKey;
       if (event.key === 'Escape') {
         KeyPreview.stop();
         if (dialog) setDialog(null);
         return;
       }
-      if (ShortcutGuard.controlOwnsKey(target, event.key)) return;
+      if (ShortcutGuard.controlOwnsKey(target, event.key, mod)) return;
       if (dialog || showProducer || typing) return;
       if (mod && event.key.toLowerCase() === 'f') {
         event.preventDefault();
@@ -206,6 +316,9 @@ export function App() {
       } else if (mod && event.key.toLowerCase() === 'e') {
         event.preventDefault();
         void window.prep.exportCsv(selected).then((file) => file && toast(`Catalog saved to ${file}`));
+      } else if (mod && event.key.toLowerCase() === 'z' && !event.shiftKey && nameUndoRef.current && toasts.some((item) => item.id === undoToastId.current)) {
+        event.preventDefault();
+        void undoNames(nameUndoRef.current);
       } else if (mod && event.key === 'Enter') {
         event.preventDefault();
         void analyzeIds(selected.length ? selected : activeId ? [activeId] : []);
@@ -254,7 +367,93 @@ export function App() {
 
   const mac = window.prep.platform === 'darwin';
   const exportLabel = selected.length ? `Export ${selected.length} selected` : 'Export catalog';
-  const progress = job && busy.length ? `Analyzing ${job.total - busy.length + 1} of ${job.total}…` : '';
+
+  function selectVisible(on: boolean) {
+    const ids = new Set(visible.map((beat) => beat.id));
+    setSelected((current) => (on ? [...new Set([...current, ...ids])] : current.filter((id) => !ids.has(id))));
+  }
+
+  function nameRows(ids: string[], avoid: string[] = []): { id: string; from: string; to: string }[] {
+    const idSet = new Set(ids);
+    const chosen = visible.filter((beat) => idSet.has(beat.id));
+    const hidden = beats.filter((beat) => idSet.has(beat.id) && !chosen.some((item) => item.id === beat.id));
+    const rows = [...chosen, ...hidden];
+    const taken = [...beats.map((beat) => beat.title), ...avoid];
+    const titles = BeatNames.propose(rows.length, taken);
+    return rows.map((beat, index) => ({ id: beat.id, from: beat.title, to: titles[index] }));
+  }
+
+  function openNames() {
+    if (!selected.length || job) return;
+    try {
+      setDialog({ type: 'names', rows: nameRows(selected) });
+    } catch {
+      toast(UserMessage.namesFailed, 'error');
+    }
+  }
+
+  function rerollNames() {
+    if (dialog?.type !== 'names') return;
+    try {
+      setDialog({ type: 'names', rows: nameRows(dialog.rows.map((row) => row.id), dialog.rows.map((row) => row.to)) });
+    } catch {
+      toast(UserMessage.namesFailed, 'error');
+    }
+  }
+
+  function rerollOne(id: string) {
+    if (dialog?.type !== 'names') return;
+    try {
+      const taken = [...beats.map((beat) => beat.title), ...dialog.rows.map((row) => row.to)];
+      const [title] = BeatNames.propose(1, taken);
+      setDialog({ type: 'names', rows: dialog.rows.map((row) => (row.id === id ? { ...row, to: title } : row)) });
+    } catch {
+      toast(UserMessage.namesFailed, 'error');
+    }
+  }
+
+  async function applyNames(rows: { id: string; from: string; to: string }[]) {
+    const undo: NameUndoRow[] = [];
+    let failed = false;
+    for (const row of rows) {
+      const beat = beats.find((item) => item.id === row.id);
+      const result = await window.prep.updateBeat(row.id, { title: row.to });
+      if ('error' in result && result.error) {
+        toast(result.error, 'error');
+        failed = true;
+        continue;
+      }
+      if ('beat' in result && result.beat) {
+        replace(result.beat);
+        undo.push({ id: row.id, from: row.from, to: row.to, tagsDirty: beat?.tagsDirty === true, appliedAt: result.beat.updatedAt });
+      }
+    }
+    if (undo.length) {
+      nameUndoRef.current = undo;
+      undoToastId.current = toast(UserMessage.namesApplied, 'ok', {
+        ms: 10000,
+        action: { label: 'Undo', run: () => void undoNames(undo) },
+      });
+    }
+    if (!failed) setDialog(null);
+  }
+
+  async function undoNames(rows: NameUndoRow[]) {
+    if (nameUndoRef.current === rows) {
+      nameUndoRef.current = null;
+      const toastId = undoToastId.current;
+      undoToastId.current = null;
+      if (toastId != null) setToasts((current) => current.filter((item) => item.id !== toastId));
+    }
+    const current = await window.prep.list();
+    const plan = BeatNames.restorePlan(rows, current);
+    for (const item of plan.restore) {
+      const result = await window.prep.restoreTitle(item.id, item.title, item.tagsDirty);
+      if ('beat' in result && result.beat) replace(result.beat);
+      else if ('error' in result && result.error) toast(result.error, 'error');
+    }
+    toast(plan.skipped.length ? UserMessage.namesRestoredSome(plan.skipped) : UserMessage.namesRestored);
+  }
 
   async function openCover(file: File) {
     const copy = await file.arrayBuffer();
@@ -263,7 +462,7 @@ export function App() {
 
   return (
     <div
-      className={beats.length === 0 ? 'app empty-lib' : 'app'}
+      className={`app${beats.length === 0 ? ' empty-lib' : ''}`}
       onDragEnter={(event) => { event.preventDefault(); dragDepth.current += 1; setDragOver(true); }}
       onDragOver={(event) => event.preventDefault()}
       onDragLeave={() => { dragDepth.current -= 1; if (dragDepth.current <= 0) { dragDepth.current = 0; setDragOver(false); } }}
@@ -349,6 +548,7 @@ export function App() {
                   else { setSortKey(key); setSortDirection(key === 'title' ? 'asc' : 'desc'); }
                 }}
                 onChoose={choose}
+                onSelectVisible={selectVisible}
               />
               <p className="table-hint">Drop more beats anywhere to import them.</p>
             </>
@@ -385,12 +585,14 @@ export function App() {
             setDialog({ type: 'crop', src: URL.createObjectURL(blob), name: 'cover.jpg' });
           }}
           onBatch={() => selected.length > 1 && setDialog({ type: 'batch' })}
+          onNames={openNames}
           selectionCount={selected.length}
         />
       </div>
       <footer className="footer">
-        <span>{beats.length} {beats.length === 1 ? 'beat' : 'beats'} · {selected.length} selected</span>
-        <span>{progress}</span>
+        {job ? <ImportBar snapshot={job} onStop={stopImport} /> : (
+          <span className="footer-count">{beats.length} {beats.length === 1 ? 'beat' : 'beats'} · {selected.length} selected</span>
+        )}
         <span className="footer-right">
           <button className="powered" type="button" onClick={() => void window.prep.openSite()}>
             Powered by <span>AwkBeats</span>
@@ -398,6 +600,7 @@ export function App() {
           <button className="btn btn-ghost" type="button" onClick={() => setDialog({ type: 'shortcuts' })}>Shortcuts</button>
         </span>
       </footer>
+      <span className="sr" role="status" aria-atomic="true">{job ? ImportProgress.milestone(job) : ''}</span>
       {dragOver && beats.length > 0 ? (
         <div className="drop">
           <img src={logoUrl} alt="" />
@@ -407,9 +610,10 @@ export function App() {
       ) : null}
       <div className="toast-wrap">
         {toasts.map((item) => (
-          <div className={item.tone === 'error' ? 'toast error' : 'toast'} key={item.id} role={item.tone === 'error' ? 'alert' : 'status'}>
+          <div className={item.tone === 'ok' ? 'toast' : `toast ${item.tone}`} key={item.id} role={item.tone === 'error' ? 'alert' : 'status'}>
             <span>{item.text}</span>
-            {item.tone === 'error' ? <button type="button" aria-label="Dismiss" onClick={() => setToasts((current) => current.filter((toastItem) => toastItem.id !== item.id))}>×</button> : null}
+            {item.action ? <button className="toast-action" type="button" onClick={item.action.run}>{item.action.label}</button> : null}
+            {item.tone !== 'ok' ? <button type="button" aria-label="Dismiss" onClick={() => setToasts((current) => current.filter((toastItem) => toastItem.id !== item.id))}>×</button> : null}
           </div>
         ))}
       </div>
@@ -435,6 +639,15 @@ export function App() {
         />
       ) : null}
       {dialog?.type === 'shortcuts' ? <ShortcutsDialog onClose={() => setDialog(null)} /> : null}
+      {dialog?.type === 'names' ? (
+        <NameDialog
+          rows={dialog.rows}
+          onClose={() => setDialog(null)}
+          onReroll={rerollNames}
+          onRerollOne={rerollOne}
+          onApply={() => void applyNames(dialog.rows)}
+        />
+      ) : null}
       {dialog?.type === 'batch' ? (
         <BatchDialog
           count={selected.length}

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { BpmMath } from '@core/analysis/BpmMath';
 import { BeatStatusLabel, Format, KeyChoice, type Beat, type SortDirection, type SortKey } from '@core/library/types';
+import { CheckBox } from './CheckBox';
 
 const columns: { key: SortKey; label: string; className: string }[] = [
   { key: 'title', label: 'Title', className: 'col-title' },
@@ -20,9 +21,14 @@ export function TrackTable(props: {
   sortDirection: SortDirection;
   onSort: (key: SortKey) => void;
   onChoose: (id: string, index: number, event: { shiftKey: boolean; metaKey: boolean; ctrlKey: boolean }) => void;
+  onSelectVisible: (selected: boolean) => void;
 }) {
-  const narrow = useNarrow();
+  const hideGenre = useMaxWidth('(max-width: 1359px)');
+  const hideDate = useMaxWidth('(max-width: 1599px)');
   const tabId = props.beats.some((beat) => beat.id === props.activeId) ? props.activeId : props.beats[0]?.id;
+  const visibleIds = props.beats.map((beat) => beat.id);
+  const selectedVisible = visibleIds.filter((id) => props.selected.includes(id)).length;
+  const allVisible = visibleIds.length > 0 && selectedVisible === visibleIds.length;
 
   return (
     <table className="tracks" role="grid" aria-label="Beats">
@@ -37,7 +43,14 @@ export function TrackTable(props: {
       </colgroup>
       <thead>
         <tr role="row">
-          <th scope="col" role="columnheader"><span className="sr">Select</span></th>
+          <th scope="col" role="columnheader">
+            <CheckBox
+              checked={allVisible}
+              indeterminate={selectedVisible > 0 && !allVisible}
+              ariaLabel="Select all visible beats"
+              onChange={(checked) => props.onSelectVisible(checked)}
+            />
+          </th>
           {columns.map((column) => (
             <th
               key={column.key}
@@ -64,8 +77,8 @@ export function TrackTable(props: {
             credit,
             beat.format.toUpperCase(),
             Format.duration(beat.durationSec),
-            narrow && beat.genre ? beat.genre : '',
-            narrow && beat.date ? Format.date(beat.date) : '',
+            hideGenre && beat.genre ? beat.genre : '',
+            hideDate && beat.date ? Format.date(beat.date) : '',
             props.busy.includes(beat.id) ? 'Analyzing' : '',
           ].filter(Boolean);
           return (
@@ -99,14 +112,11 @@ export function TrackTable(props: {
               }}
             >
               <td role="gridcell">
-                <input
-                  type="checkbox"
-                  aria-label={`Select ${beat.title}`}
+                <CheckBox
                   checked={picked}
-                  onChange={() => undefined}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    props.onChoose(beat.id, index, { ...event, metaKey: true, ctrlKey: true, shiftKey: event.shiftKey });
+                  ariaLabel={`Select ${beat.title}`}
+                  onChange={(_checked, shiftKey) => {
+                    props.onChoose(beat.id, index, { shiftKey, metaKey: true, ctrlKey: true });
                   }}
                 />
               </td>
@@ -146,14 +156,14 @@ function LockMark() {
   );
 }
 
-function useNarrow(): boolean {
-  const [narrow, setNarrow] = useState(false);
+function useMaxWidth(query: string): boolean {
+  const [matches, setMatches] = useState(false);
   useEffect(() => {
-    const query = window.matchMedia('(max-width: 1359px)');
-    const apply = () => setNarrow(query.matches);
+    const media = window.matchMedia(query);
+    const apply = () => setMatches(media.matches);
     apply();
-    query.addEventListener('change', apply);
-    return () => query.removeEventListener('change', apply);
-  }, []);
-  return narrow;
+    media.addEventListener('change', apply);
+    return () => media.removeEventListener('change', apply);
+  }, [query]);
+  return matches;
 }

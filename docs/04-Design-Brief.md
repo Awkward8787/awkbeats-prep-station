@@ -112,7 +112,7 @@ Tokens live in `src/core/brand/Theme.ts` and are applied to the document root be
 | `--line-control` on `--plum-850` / `--plum-900` | 3.49 / 3.78 | AA for control boundaries |
 | `--danger-text` on `--plum-900` | 8.39 | AAA |
 
-Gold is limited to the logo, one primary button per screen, the Camelot badge, the selected-row marker, the waveform played portion, the focus ring, and the In progress status. The gold primary is Import beats on the empty library, and Write tags to file in the inspector. The top-bar Import beats button is secondary so it does not compete with Write tags. Do not put gold on every border, do not use gold text on a mid purple, and do not use white text on gold.
+Gold is limited to the logo, one primary button per screen, the Camelot badge, the selected-row marker, the waveform played portion, the focus ring, the In progress status, checked and indeterminate checkboxes, and the import progress fill. Checked and indeterminate boxes are a gold fill with a gold-ink mark. The progress fill is the gold bar in the footer. Unchecked hover uses the plum hover, not a gold border. The gold primary is Import beats on the empty library, and Write tags to file in the inspector. The top-bar Import beats button is secondary so it does not compete with Write tags. Do not put gold on every border, do not use gold text on a mid purple, and do not use white text on gold.
 
 Status dots are 8px circles plus the status word. The word is always present. Section titles are 12px sentence case in `--text-dim`. Selection is a plum fill plus a 3px gold inset on the first cell. Fill alone is 1.37:1 against the rail and is not enough.
 
@@ -134,7 +134,9 @@ Only the wordmark stays uppercase. Section titles and table headers are sentence
 
 ## 5. Spacing, layout, and grid
 
-The app grid is a 60px top bar, a flexible workspace, and a 36px footer. At 1360px and wider the workspace is 248px, a flexible table, and a 380px inspector. At 1359px and below it is `216px minmax(0, 1fr) 340px`. Genre and Date are hidden. Key is 124 and Status is 132 so the status pill, including "In progress", stays inside the cell. The table is `table-layout: fixed`. At 1360 and wider the column widths are checkbox 40, BPM 72, Key 132, Genre 112, Status 120, Date 104. The title column takes the rest and ellipsizes both lines. There is no 980px breakpoint. The window minimum is 1100×700 and the default is 1440×920.
+The app grid is a 60px top bar, a flexible workspace, and a 36px footer. At 1360px and wider the workspace is 248px, a flexible table, and a 380px inspector. At 1359px and below it is `216px minmax(0, 1fr) 340px`. At 1359 and below, Genre and Date move onto the title subline. From 1360 through 1599, Date is on the title subline and Genre stays in its column. Key is 124 and Status is 132 below 1360 so the status pill, including "In progress", stays inside the cell. The table is `table-layout: fixed`. At 1600 and wider the column widths are checkbox 44, BPM 72, Key 132, Genre 112, Status 120, Date 104. The title column takes the rest and ellipsizes both lines. There is no 980px breakpoint. The window minimum is 1100×700 and the default is 1440×920.
+
+While files import or re-analyze, the footer count is replaced by the progress bar in that same 36px row, so the workspace does not move. The bar counts finished files only. One decorative status line appears after 1.5s, changes at most every 3s, and does not repeat. Random names change the library title only. File names on disk stay the same until Write tags to file.
 
 Spacing is 4, 8, 12, 16, 24, and 32. Eight between related controls, 16 inside panels, 24 between inspector sections, 32 around the empty state. The search field is at most 480px wide.
 
@@ -274,6 +276,7 @@ Annotated notes: the tempo figure is `.tempo` at 32px, weight 600, tabular. The 
 | 2026-10-22 | 1.3 | Plum scale and gold accent in `Theme.ts`. Sentence case. One footer credit. BPM integers. Key confidence under 0.45 asks for an ear check. | UI review. The app is for any producer, so no default name. |
 | 2026-10-22 | 1.4 | Waveform stroke is 1.6, gold on the played portion and faint on the rest. One gold primary per screen. | Round 2 review. |
 | 2026-10-22 | 1.5 | Below 1360, Status is 132 and Key is 124. The status pill padding is 6px and the dot does not add a second gap. | The 112px status column clipped "In progress" and drew an ellipsis at the table edge. |
+| 2026-10-22 | 1.6 | Checkbox column is 44. Checked and indeterminate boxes and the progress fill are in the gold budget. The import bar sits in the footer. Random names change the library title only. Date stays on the title subline through 1599. | v1.1 review. |
 
 ## 19. Sources
 

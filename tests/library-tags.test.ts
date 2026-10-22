@@ -8,6 +8,7 @@ import { ReferenceAudio } from '../src/core/audio/ReferenceAudio';
 import { CsvExport } from '../src/core/library/CsvExport';
 import { Importer } from '../src/core/library/Importer';
 import { BeatQuery, BeatValidation } from '../src/core/library/BeatRules';
+import { BeatNames } from '../src/core/library/BeatNames';
 import { BeatRecord, LibraryStore } from '../src/core/library/LibraryStore';
 import { SquareCrop } from '../src/core/library/SquareCrop';
 import NodeID3 from 'node-id3';
@@ -159,6 +160,76 @@ describe('Library', () => {
     expect(KeyChoice.working(locked).name).toBe('F# minor');
     const duplicate = await Importer.importPaths(store, [filePath]);
     expect(duplicate.duplicates).toBe(1);
+    expect(duplicate.unanalyzed).toEqual([]);
+    expect(duplicate.cancelled).toBe(false);
+  });
+
+  it('keeps a beat whose audio cannot be analyzed and names the file', async () => {
+    const dir = tempDir();
+    const filePath = path.join(dir, 'Broken Bounce.wav');
+    fs.writeFileSync(filePath, Buffer.from('not a wav'));
+    const store = new LibraryStore(path.join(dir, 'library'));
+    const result = await Importer.importPaths(store, [filePath]);
+    expect(result.imported).toHaveLength(1);
+    expect(result.failed).toEqual([]);
+    expect(result.unanalyzed).toEqual(['Broken Bounce.wav']);
+    expect(store.list()).toHaveLength(1);
+    expect(store.list()[0].title).toBe('Broken Bounce');
+  });
+
+  it('stops before the next file when cancelled', async () => {
+    const dir = tempDir();
+    const encoded = PcmDecoder.encodeWav(ReferenceAudio.clicks({ bpm: 100, seconds: 0.2 }), 44100);
+    const first = path.join(dir, 'A.wav');
+    const second = path.join(dir, 'B.wav');
+    fs.writeFileSync(first, encoded);
+    fs.writeFileSync(second, encoded);
+    const store = new LibraryStore(path.join(dir, 'library'));
+    let seen = 0;
+    const result = await Importer.importPaths(store, [first, second], () => { seen += 1; }, () => seen > 0);
+    expect(result.cancelled).toBe(true);
+    expect(result.imported).toHaveLength(1);
+    expect(store.list()).toHaveLength(1);
+  });
+
+  it('restores a title without forcing the tags-dirty flag', async () => {
+    const dir = tempDir();
+    const filePath = path.join(dir, 'Plain.wav');
+    fs.writeFileSync(filePath, PcmDecoder.encodeWav(ReferenceAudio.clicks({ bpm: 100, seconds: 0.2 }), 44100));
+    const store = new LibraryStore(path.join(dir, 'library'));
+    const imported = await Importer.importPaths(store, [filePath]);
+    const beat = imported.imported[0];
+    expect(store.clearTagsDirty(beat.id).tagsDirty).toBe(false);
+    store.update(beat.id, { title: 'Velvet Room' });
+    expect(store.get(beat.id)?.tagsDirty).toBe(true);
+    const restored = store.restoreTitle(beat.id, beat.title, false);
+    expect(restored.title).toBe(beat.title);
+    expect(restored.tagsDirty).toBe(false);
+  });
+
+  it('keeps a beat dirty when undo follows an unwritten genre edit', async () => {
+    const dir = tempDir();
+    const filePath = path.join(dir, 'Night Drive.wav');
+    fs.writeFileSync(filePath, PcmDecoder.encodeWav(ReferenceAudio.clicks({ bpm: 90, seconds: 0.2 }), 44100));
+    const store = new LibraryStore(path.join(dir, 'library'));
+    const imported = await Importer.importPaths(store, [filePath]);
+    const beat = imported.imported[0];
+    expect(store.clearTagsDirty(beat.id).tagsDirty).toBe(false);
+    const renamed = store.update(beat.id, { title: 'Velvet Room' });
+    const appliedAt = renamed.updatedAt;
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    const edited = store.update(beat.id, { genre: 'Neo Soul' });
+    expect(edited.genre).toBe('Neo Soul');
+    expect(edited.updatedAt).not.toBe(appliedAt);
+    const plan = BeatNames.restorePlan(
+      [{ id: beat.id, from: beat.title, to: 'Velvet Room', tagsDirty: false, appliedAt }],
+      [{ id: edited.id, title: edited.title, updatedAt: edited.updatedAt }],
+    );
+    expect(plan.restore).toHaveLength(1);
+    const restored = store.restoreTitle(plan.restore[0].id, plan.restore[0].title, plan.restore[0].tagsDirty);
+    expect(restored.title).toBe(beat.title);
+    expect(restored.genre).toBe('Neo Soul');
+    expect(restored.tagsDirty).toBe(true);
   });
 
   it('filters, sorts, validates, and exports CSV', () => {

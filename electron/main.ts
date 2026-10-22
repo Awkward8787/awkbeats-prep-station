@@ -6,6 +6,7 @@ import { pathToFileURL } from 'node:url';
 import { ByteRange } from '../src/core/audio/ByteRange';
 import { PcmDecoder } from '../src/core/audio/PcmDecoder';
 import { TrackAnalyzer } from '../src/core/analysis/TrackAnalyzer';
+import { AudioFiles } from '../src/core/library/AudioFiles';
 import { CsvExport } from '../src/core/library/CsvExport';
 import { Importer } from '../src/core/library/Importer';
 import { Theme } from '../src/core/brand/Theme';
@@ -40,6 +41,7 @@ protocol.registerSchemesAsPrivileged([
 let store: LibraryStore;
 let mainWindow: BrowserWindow | null = null;
 let startupDecode: string[] = [];
+let cancelImport = false;
 
 function version(): string {
   try {
@@ -256,9 +258,21 @@ function registerIpc(): void {
     return ids;
   });
   ipcMain.handle('app:site', () => shell.openExternal(SITE));
-  ipcMain.handle('library:import', async (_event, paths: string[]) => {
-    if (!Array.isArray(paths)) return { imported: [], duplicates: 0, failed: [], needsDecode: [] };
-    return Importer.importPaths(store, paths.filter((item) => typeof item === 'string'));
+  ipcMain.handle('library:cancel-import', () => {
+    cancelImport = true;
+  });
+  ipcMain.handle('library:import', async (event, paths: string[]) => {
+    cancelImport = false;
+    if (!Array.isArray(paths)) {
+      return { imported: [], duplicates: 0, failed: [], needsDecode: [], decodeAt: [], unanalyzed: [], cancelled: false };
+    }
+    return Importer.importPaths(store, paths.filter((item) => typeof item === 'string'), (tick) => {
+      if (!event.sender.isDestroyed()) event.sender.send('import-progress', tick);
+    }, () => cancelImport);
+  });
+  ipcMain.handle('library:collect', async (_event, paths: string[]) => {
+    if (!Array.isArray(paths)) return [];
+    return AudioFiles.collect(paths.filter((item) => typeof item === 'string'));
   });
   ipcMain.handle('dialog:audio', async () => {
     const result = await dialog.showOpenDialog({
@@ -285,6 +299,13 @@ function registerIpc(): void {
   ipcMain.handle('beat:update', (_event, id: string, patch: UserPatch) => {
     try {
       return { beat: store.update(id, patch) };
+    } catch (error) {
+      return { error: fail(error) };
+    }
+  });
+  ipcMain.handle('beat:restore-title', (_event, id: string, title: string, tagsDirty: boolean) => {
+    try {
+      return { beat: store.restoreTitle(id, String(title ?? ''), tagsDirty === true) };
     } catch (error) {
       return { error: fail(error) };
     }
