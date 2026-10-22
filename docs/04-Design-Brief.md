@@ -7,7 +7,7 @@
 | Project | AwkBeats Prep Station |
 | Document title | Design Brief |
 | Document ID | ABP-DESIGN |
-| Version | 1.3 |
+| Version | 1.4 |
 | Status | Final (as shipped) |
 | Last updated | 2026-10-22 (UTC) |
 | Author | Cursor Agent, for owner Awkward J |
@@ -112,7 +112,7 @@ Tokens live in `src/core/brand/Theme.ts` and are applied to the document root be
 | `--line-control` on `--plum-850` / `--plum-900` | 3.49 / 3.78 | AA for control boundaries |
 | `--danger-text` on `--plum-900` | 8.39 | AAA |
 
-Gold is limited to the logo, the one primary button in the top bar, the Camelot badge, the selected-row marker, the waveform played portion, the focus ring, and the In progress status. Write tags to file is the primary button inside the inspector. Do not put gold on every border, do not use gold text on a mid purple, and do not use white text on gold.
+Gold is limited to the logo, one primary button per screen, the Camelot badge, the selected-row marker, the waveform played portion, the focus ring, and the In progress status. The gold primary is Import beats on the empty library, and Write tags to file in the inspector. The top-bar Import beats button is secondary so it does not compete with Write tags. Do not put gold on every border, do not use gold text on a mid purple, and do not use white text on gold.
 
 Status dots are 8px circles plus the status word. The word is always present. Section titles are 12px sentence case in `--text-dim`. Selection is a plum fill plus a 3px gold inset on the first cell. Fill alone is 1.37:1 against the rail and is not enough.
 
@@ -172,14 +172,14 @@ Code lives in `src/renderer/styles.css` and the TSX files named below.
 | Tempo and key | 32px BPM, key once, ½× 1× 2×, lock | Difference line only when working differs from detected | `Inspector.tsx` |
 | Key preview | 32px speaker button, separate AudioContext | Chord about 1.5s. Hold sustains the root. No glow. | `KeyPreview.tsx` |
 | Cover | 120px dashed target when empty, square when set | Image drops stay on this target | `Inspector.tsx` |
-| Inspector footer | Sticky | Write tags, Show in folder, Remove | `Inspector.tsx` |
+| Inspector footer | Sticky, one row | Write tags, Show in folder. Remove sits at the end of Catalog. | `Inspector.tsx` |
 | Modal | Scrim, plum panel, radius 12 | Initial focus, Tab trap, focus return, `aria-labelledby` | `dialogs.tsx` |
 | Toast | Radius 12 | Success leaves after 4s. Errors stay until dismissed. | `App.tsx` |
-| kbd | Mono, gold text, control border | One key per `kbd`. macOS uses ⌘, Windows uses Ctrl. | Shortcuts |
+| kbd | Mono, control border | Search hint uses dim text. The Shortcuts dialog keeps gold text. One key per `kbd`. | Shortcuts |
 
 ## 8. Iconography and illustration
 
-The only illustration is the AwkBeats A (gold with a purple facet) and the analysis waveform, which is a gold SVG path of the beat's 160 peaks (stroke `#e4b15a` via `--gold`, width 1.4, no fill). Status uses CSS dots, not an icon font. No third-party icon set.
+The only illustration is the AwkBeats A (gold with a purple facet) and the analysis waveform. The waveform is an SVG of the beat's peaks: stroke width 1.6, no fill. The played portion uses `--gold`. The rest uses `--text-faint`. Status uses CSS dots, not an icon font. No third-party icon set.
 
 ## 9. Motion
 
@@ -246,7 +246,7 @@ The running window was captured during development. Images are pull-request arti
 - Metadata and artwork: cover well, title, producer, genre, mood, tags.
 - Crop dialog: title "Crop cover", export size 3000×3000, Use cover.
 
-Annotated notes: the tempo figure is `.tempo` at 32px, weight 600, tabular. The Camelot code sits in `.camelot`. The top-bar primary action is "Import beats". The inspector primary action is "Write tags to file". The crop primary action is "Use cover".
+Annotated notes: the tempo figure is `.tempo` at 32px, weight 600, tabular. The Camelot code sits in `.camelot`. The empty-library primary action is "Import beats". The inspector primary action is "Write tags to file". The crop primary action is "Use cover". The top bar Import beats button is secondary.
 
 ## 16. Glossary
 
@@ -272,6 +272,7 @@ Annotated notes: the tempo figure is `.tempo` at 32px, weight 600, tabular. The 
 | 2026-10-21 | 1.1 | The mark is the iOS gold A. Transparent file in the window, opaque file on installers. | Owner supplied the logo. |
 | 2026-10-22 | 1.2 | Window surfaces moved off black toward the logo purple. | Superseded by 1.3. |
 | 2026-10-22 | 1.3 | Plum scale and gold accent in `Theme.ts`. Sentence case. One footer credit. BPM integers. Key confidence under 0.45 asks for an ear check. | UI review. The app is for any producer, so no default name. |
+| 2026-10-22 | 1.4 | Waveform stroke is 1.6, gold on the played portion and faint on the rest. One gold primary per screen. | Round 2 review. |
 
 ## 19. Sources
 

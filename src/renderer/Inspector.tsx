@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { PlaybackSpan } from '@core/audio/PlaybackSpan';
 import { BpmMath } from '@core/analysis/BpmMath';
 import { Camelot } from '@core/analysis/Camelot';
 import { KeyConfidence } from '@core/analysis/KeyConfidence';
@@ -102,21 +103,28 @@ export function Inspector(props: {
         <BeatAudio beat={beat} onPlayChange={props.onPlayChange} />
         {beat.missing ? <p className="error">{UserMessage.fileMissing}</p> : null}
 
-        <h2>Tempo and key</h2>
+        <div className="section-head">
+          <h2>Tempo and key</h2>
+          <button className="btn btn-ghost" type="button" onClick={props.onAnalyze} disabled={props.busy || beat.missing}>{props.busy ? 'Analyzing…' : 'Re-analyze'}</button>
+        </div>
         <section className="analysis" aria-label="Tempo and key">
           <div className="tempo-row">
             <div className="tempo">{Format.bpm(bpm) ? <>{Format.bpm(bpm)}<span> BPM</span></> : 'BPM'}</div>
             {working.camelot ? <span className="camelot">{working.camelot}</span> : null}
+            <button className="icon-toggle" type="button" aria-label="Lock BPM" title="Lock BPM" aria-pressed={beat.bpmLocked} onClick={() => save({ bpmLocked: !beat.bpmLocked })}>
+              <LockIcon closed={beat.bpmLocked} />
+            </button>
           </div>
           <div className="key-line">
             <span className="key-name">{working.name || 'Key not measured'}</span>
-            <KeyPlay name={working.name} />
-            <HoldDrone name={working.name} />
+            <button className="icon-toggle" type="button" aria-label="Lock key" title="Lock key" aria-pressed={beat.keyLocked} onClick={() => save({ keyLocked: !beat.keyLocked })}>
+              <LockIcon closed={beat.keyLocked} />
+            </button>
           </div>
           {tempoNote ? <p className="faint">{tempoNote}</p> : null}
           {keyNote ? <p className="faint">{keyNote}</p> : null}
           {lowConfidence ? <p className="faint">Low key confidence. Check by ear.</p> : null}
-          {beat.peaks.length ? <Waveform peaks={beat.peaks} /> : <p className="faint">{UserMessage.analyzeIdle}</p>}
+          {beat.peaks.length ? <Waveform key={beat.id} peaks={beat.peaks} durationSec={beat.durationSec} /> : <p className="faint">{UserMessage.analyzeIdle}</p>}
           <div className="tempo-controls">
             <div className="segment" role="radiogroup" aria-label="Tempo scale">
               {([[0.5, '½×'], [1, '1×'], [2, '2×']] as const).map(([scale, label]) => (
@@ -134,9 +142,6 @@ export function Inspector(props: {
               <label htmlFor="bpm-override" className="sr">BPM</label>
               <input id="bpm-override" inputMode="decimal" value={bpmDraft} onChange={(event) => setBpmDraft(event.target.value)} onBlur={commitBpm} />
             </div>
-            <button className={beat.bpmLocked ? 'btn lock on' : 'btn lock'} type="button" aria-pressed={beat.bpmLocked} onClick={() => save({ bpmLocked: !beat.bpmLocked })}>
-              <LockIcon /> Lock
-            </button>
           </div>
           {bpmError ? <p className="error">{bpmError}</p> : null}
           <div className="key-edit">
@@ -153,15 +158,13 @@ export function Inspector(props: {
                 <option value="minor">Minor</option>
               </select>
             </div>
-            <button className={beat.keyLocked ? 'btn lock on' : 'btn lock'} type="button" aria-pressed={beat.keyLocked} onClick={() => save({ keyLocked: !beat.keyLocked })}>
-              <LockIcon /> Lock
-            </button>
-          </div>
-          <div className="button-row">
             {beat.keyOverride ? (
               <button className="btn btn-ghost" type="button" onClick={() => save({ keyOverride: null, camelotOverride: null })}>Reset to detected</button>
             ) : null}
-            <button className="btn" type="button" onClick={props.onAnalyze} disabled={props.busy || beat.missing}>{props.busy ? 'Analyzing…' : 'Re-analyze'}</button>
+          </div>
+          <div className="key-actions">
+            <KeyPlay name={working.name} />
+            <HoldDrone name={working.name} />
           </div>
         </section>
 
@@ -263,13 +266,11 @@ export function Inspector(props: {
         </div>
         <Text label="Notes" value={draft.notes} area onChange={(notes) => setDraft({ ...draft, notes })} onBlur={() => save({ notes: draft.notes })} />
         {props.selectionCount > 1 ? <button className="btn" type="button" onClick={props.onBatch}>Edit {props.selectionCount} selected</button> : null}
+        <button className="btn btn-danger catalog-remove" type="button" onClick={props.onRemove}>Remove from library</button>
       </div>
       <div className="inspector-footer">
         <button className="btn btn-primary" type="button" onClick={props.onWrite} disabled={beat.missing}>Write tags to file</button>
-        <div className="inspector-actions">
-          <button className="btn" type="button" onClick={props.onReveal} disabled={beat.missing}>Show in folder</button>
-          <button className="btn btn-danger" type="button" onClick={props.onRemove}>Remove</button>
-        </div>
+        <button className="btn" type="button" onClick={props.onReveal} disabled={beat.missing}>Show in folder</button>
       </div>
     </aside>
   );
@@ -300,26 +301,52 @@ function BeatAudio(props: { beat: Beat; onPlayChange: (playing: boolean) => void
   );
 }
 
-function Waveform(props: { peaks: number[] }) {
+function Waveform(props: { peaks: number[]; durationSec: number | null }) {
   const [time, setTime] = useState(0);
-  const [duration, setDuration] = useState(0);
+  const [reported, setReported] = useState(0);
+  const [playing, setPlaying] = useState(false);
   const frame = useRef(0);
   useEffect(() => {
     const audio = document.getElementById('beat-player') as HTMLAudioElement | null;
     if (!audio) return;
+    const read = () => {
+      setTime(audio.currentTime || 0);
+      setReported(audio.duration);
+      setPlaying(!audio.paused);
+    };
+    read();
+    audio.addEventListener('timeupdate', read);
+    audio.addEventListener('loadedmetadata', read);
+    audio.addEventListener('durationchange', read);
+    audio.addEventListener('play', read);
+    audio.addEventListener('pause', read);
+    audio.addEventListener('ended', read);
+    return () => {
+      audio.removeEventListener('timeupdate', read);
+      audio.removeEventListener('loadedmetadata', read);
+      audio.removeEventListener('durationchange', read);
+      audio.removeEventListener('play', read);
+      audio.removeEventListener('pause', read);
+      audio.removeEventListener('ended', read);
+    };
+  }, []);
+  useEffect(() => {
+    if (!playing) return;
+    const audio = document.getElementById('beat-player') as HTMLAudioElement | null;
+    if (!audio) return;
     const tick = () => {
       setTime(audio.currentTime || 0);
-      setDuration(Number.isFinite(audio.duration) ? audio.duration : 0);
       frame.current = window.requestAnimationFrame(tick);
     };
     frame.current = window.requestAnimationFrame(tick);
     return () => window.cancelAnimationFrame(frame.current);
-  }, []);
+  }, [playing]);
+  const duration = PlaybackSpan.total(reported, props.durationSec);
   const ratio = duration > 0 ? Math.min(1, time / duration) : 0;
   function seekTo(next: number) {
     const audio = document.getElementById('beat-player') as HTMLAudioElement | null;
-    if (!audio || !Number.isFinite(audio.duration)) return;
-    audio.currentTime = Math.max(0, Math.min(audio.duration, next));
+    if (!audio || duration <= 0) return;
+    audio.currentTime = Math.max(0, Math.min(duration, next));
     setTime(audio.currentTime);
   }
   return (
@@ -389,11 +416,15 @@ function PauseIcon() {
   );
 }
 
-function LockIcon() {
+function LockIcon(props: { closed: boolean }) {
   return (
-    <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+    <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
       <rect x="3" y="7" width="10" height="7" rx="1.2" fill="none" stroke="currentColor" strokeWidth="1.5" />
-      <path d="M5.2 7V5.2a2.8 2.8 0 0 1 5.6 0V7" fill="none" stroke="currentColor" strokeWidth="1.5" />
+      {props.closed ? (
+        <path d="M5.2 7V5.2a2.8 2.8 0 0 1 5.6 0V7" fill="none" stroke="currentColor" strokeWidth="1.5" />
+      ) : (
+        <path d="M8 7V4.4a2.6 2.6 0 0 1 5.2 0" fill="none" stroke="currentColor" strokeWidth="1.5" />
+      )}
     </svg>
   );
 }

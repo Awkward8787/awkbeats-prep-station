@@ -24,13 +24,6 @@ export function TrackTable(props: {
   const narrow = useNarrow();
   const tabId = props.beats.some((beat) => beat.id === props.activeId) ? props.activeId : props.beats[0]?.id;
 
-  useEffect(() => {
-    if (!props.activeId) return;
-    const row = document.querySelector<HTMLElement>(`tr[data-id="${props.activeId}"]`);
-    const focused = document.activeElement?.closest('table.tracks, body');
-    if (focused) row?.focus();
-  }, [props.activeId]);
-
   return (
     <table className="tracks" role="grid" aria-label="Beats">
       <colgroup>
@@ -72,6 +65,7 @@ export function TrackTable(props: {
             beat.format.toUpperCase(),
             Format.duration(beat.durationSec),
             narrow && beat.genre ? beat.genre : '',
+            narrow && beat.date ? Format.date(beat.date) : '',
             props.busy.includes(beat.id) ? 'Analyzing' : '',
           ].filter(Boolean);
           return (
@@ -90,7 +84,10 @@ export function TrackTable(props: {
                   event.stopPropagation();
                   const next = index + (event.key === 'ArrowDown' ? 1 : -1);
                   const beatNext = props.beats[next];
-                  if (beatNext) props.onChoose(beatNext.id, next, event);
+                  if (beatNext) {
+                    props.onChoose(beatNext.id, next, event);
+                    (event.currentTarget.parentElement?.children[next] as HTMLElement | undefined)?.focus();
+                  }
                 } else if (event.key === 'Enter') {
                   event.preventDefault();
                   props.onChoose(beat.id, index, event);

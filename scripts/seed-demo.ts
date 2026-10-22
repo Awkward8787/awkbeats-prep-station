@@ -29,8 +29,8 @@ for (const beat of beats) {
   fs.writeFileSync(filePath, PcmDecoder.encodeWav(samples, 44100));
   TagWriter.write(filePath, 'wav', {
     title: beat.file,
-    artist: beat.file === 'Night Drive' ? 'Lina Cole' : '',
-    producer: 'Nova Beats',
+    artist: beat.file === 'Night Drive' ? 'Demo Artist' : '',
+    producer: 'Demo Producer',
     genre: beat.genre,
     mood: beat.mood,
     bpm: beat.bpm,
@@ -38,7 +38,7 @@ for (const beat of beats) {
     camelot: '',
     tags: beat.tags,
     comment: beat.notes,
-    copyright: '© 2026 Nova Beats',
+    copyright: '© 2026 Demo Producer',
     isrc: '',
     date: '2026-04-02',
     artwork: null,
@@ -59,7 +59,7 @@ execFileSync('convert', [
   path.join(audioDir, 'Night Drive.jpg'),
 ]);
 const store = new LibraryStore(userData);
-store.updateSettings({ producerName: 'Nova Beats', producerPromptDismissed: true });
+store.updateSettings({ producerName: 'Demo Producer', producerPromptDismissed: true });
 const result = await Importer.importPaths(store, [audioDir]);
 if (result.failed.length) {
   console.error(result.failed);

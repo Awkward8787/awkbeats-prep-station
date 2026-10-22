@@ -227,6 +227,8 @@ describe('Library', () => {
     const libraryDir = path.join(dir, 'library');
     const first = new LibraryStore(libraryDir);
     expect(first.getSettings().producerName).toBe('');
+    expect(first.getSettings().creditProducerAsComposer).toBe(false);
+    expect(first.updateSettings({ creditProducerAsComposer: true }).creditProducerAsComposer).toBe(true);
     expect(first.getSettings().copyrightTemplate).toBe('© {year} {producer}');
     expect(first.getSettings().producerPromptDismissed).toBe(false);
     const barePath = path.join(dir, 'Bare.wav');
@@ -310,7 +312,7 @@ describe('producer and artist tags', () => {
     expect(tags.producer).toBe('Nova Beats');
   }
 
-  it('writes artist to TPE1 and producer to TCOM, TIPL, and TXXX:PRODUCER', async () => {
+  it('writes artist to TPE1 and producer to TIPL and TXXX:PRODUCER, not TCOM', async () => {
     const dir = tempDir();
     const filePath = path.join(dir, 'beat.mp3');
     const frame = Buffer.alloc(417);
@@ -321,7 +323,7 @@ describe('producer and artist tags', () => {
     await roundTrip(filePath, 'mp3');
     const id3 = NodeID3.read(filePath);
     expect(id3.artist).toBe('Lina Cole');
-    expect(id3.composer).toBe('Nova Beats');
+    expect(id3.composer).toBeUndefined();
     expect(String(id3.involvedPeopleList)).toContain('producer');
     expect(String(id3.involvedPeopleList)).toContain('Nova Beats');
     const custom = Array.isArray(id3.userDefinedText) ? id3.userDefinedText : id3.userDefinedText ? [id3.userDefinedText] : [];
@@ -349,6 +351,23 @@ describe('producer and artist tags', () => {
     const comments = fs.readFileSync(flac).toString('utf8');
     expect(comments).toContain('ARTIST=Lina Cole');
     expect(comments).toContain('PRODUCER=Nova Beats');
-    expect(comments).toContain('COMPOSER=Nova Beats');
+    expect(comments).not.toContain('COMPOSER=');
+  });
+
+  it('writes the composer tag only when the setting is on', async () => {
+    const dir = tempDir();
+    const filePath = path.join(dir, 'beat.mp3');
+    const frame = Buffer.alloc(417);
+    frame[0] = 0xff;
+    frame[1] = 0xfb;
+    frame[2] = 0x90;
+    fs.writeFileSync(filePath, frame);
+    TagWriter.write(filePath, 'mp3', { ...distinct(), creditProducerAsComposer: true });
+    expect(NodeID3.read(filePath).composer).toBe('Nova Beats');
+
+    const flac = path.join(dir, 'beat.flac');
+    fs.copyFileSync(path.join(__dirname, 'fixtures', 'silence.flac'), flac);
+    TagWriter.write(flac, 'flac', { ...distinct(), creditProducerAsComposer: true });
+    expect(fs.readFileSync(flac).toString('utf8')).toContain('COMPOSER=Nova Beats');
   });
 });

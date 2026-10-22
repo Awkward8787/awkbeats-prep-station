@@ -31,6 +31,7 @@ export class TagCommit {
       isrc: beat.isrc,
       date: beat.date,
       producer: beat.producer,
+      creditProducerAsComposer: settings.creditProducerAsComposer,
       artwork,
     };
   }

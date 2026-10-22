@@ -27,7 +27,7 @@ export class TagWriter {
       comment: { language: 'eng', text: payload.comment || '' },
     };
     if (payload.producer) {
-      tags.composer = payload.producer;
+      if (payload.creditProducerAsComposer) tags.composer = payload.producer;
       tags.involvedPeopleList = `producer\0${payload.producer}`;
     }
     if (payload.bpm != null) tags.bpm = payload.bpm.toFixed(2);
@@ -144,7 +144,6 @@ export class TagWriter {
     const pairs: [string, string][] = [
       ['TITLE', payload.title],
       ['ARTIST', payload.artist],
-      ['COMPOSER', payload.producer],
       ['GENRE', payload.genre],
       ['COMMENT', payload.comment],
       ['DATE', payload.date],
@@ -157,10 +156,12 @@ export class TagWriter {
       ['CAMELOT', payload.camelot || ''],
       ['BPM', payload.bpm != null ? payload.bpm.toFixed(2) : ''],
       ['PRODUCER', payload.producer],
-    ].filter((pair): pair is [string, string] => Boolean(pair[1]));
+    ];
+    if (payload.creditProducerAsComposer && payload.producer) pairs.push(['COMPOSER', payload.producer]);
+    const comments = pairs.filter((pair): pair is [string, string] => Boolean(pair[1]));
     const vendor = Buffer.from('AwkBeats Prep Station', 'utf8');
-    const chunks: Buffer[] = [this.u32(vendor.length, true), vendor, this.u32(pairs.length, true)];
-    for (const [key, value] of pairs) {
+    const chunks: Buffer[] = [this.u32(vendor.length, true), vendor, this.u32(comments.length, true)];
+    for (const [key, value] of comments) {
       const line = Buffer.from(`${key}=${value}`, 'utf8');
       chunks.push(this.u32(line.length, true), line);
     }

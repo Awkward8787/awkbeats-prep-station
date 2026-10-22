@@ -56,6 +56,9 @@ export class LibraryStore {
     if (typeof patch.producerPromptDismissed === 'boolean') {
       this.settings.producerPromptDismissed = patch.producerPromptDismissed;
     }
+    if (typeof patch.creditProducerAsComposer === 'boolean') {
+      this.settings.creditProducerAsComposer = patch.creditProducerAsComposer;
+    }
     this.save();
     return this.getSettings();
   }
@@ -224,6 +227,7 @@ export class LibraryStore {
     this.settings = { ...DEFAULT_SETTINGS, ...parsed.settings };
     if (typeof this.settings.producerName !== 'string') this.settings.producerName = '';
     if (typeof this.settings.producerPromptDismissed !== 'boolean') this.settings.producerPromptDismissed = false;
+    if (typeof this.settings.creditProducerAsComposer !== 'boolean') this.settings.creditProducerAsComposer = false;
   }
 
   private fileBound(patch: UserPatch): boolean {

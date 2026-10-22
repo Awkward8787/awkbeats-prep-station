@@ -7,6 +7,7 @@ export function SettingsDialog(props: { settings: Settings; onClose: () => void;
   const [producerName, setProducerName] = useState(props.settings.producerName);
   const [copyrightTemplate, setCopyrightTemplate] = useState(props.settings.copyrightTemplate);
   const [artworkExportSize, setArtworkExportSize] = useState(props.settings.artworkExportSize);
+  const [creditProducerAsComposer, setCreditProducerAsComposer] = useState(props.settings.creditProducerAsComposer);
   return (
     <Modal title="Settings" onClose={props.onClose}>
       <div className="field">
@@ -20,6 +21,18 @@ export function SettingsDialog(props: { settings: Settings; onClose: () => void;
         <span className="faint">{'{year}'} and {'{producer}'} are replaced when a beat is imported. If the producer name is empty, the copyright line stays blank.</span>
       </div>
       <div className="field">
+        <label className="check-row" htmlFor="credit-composer">
+          <input
+            id="credit-composer"
+            type="checkbox"
+            checked={creditProducerAsComposer}
+            onChange={(event) => setCreditProducerAsComposer(event.target.checked)}
+          />
+          Also credit producer as composer
+        </label>
+        <span className="faint">Off writes the producer tag only. On also writes the composer tag.</span>
+      </div>
+      <div className="field">
         <label htmlFor="art-size">Default cover export</label>
         <select id="art-size" value={artworkExportSize} onChange={(event) => setArtworkExportSize(Number(event.target.value) === 1500 ? 1500 : 3000)}>
           <option value={1500}>1500×1500</option>
@@ -28,7 +41,7 @@ export function SettingsDialog(props: { settings: Settings; onClose: () => void;
       </div>
       <div className="modal-actions">
         <button className="btn" type="button" onClick={props.onClose}>Cancel</button>
-        <button className="btn btn-primary" type="button" onClick={() => props.onSave({ producerName, copyrightTemplate, artworkExportSize })}>Save settings</button>
+        <button className="btn btn-primary" type="button" onClick={() => props.onSave({ producerName, copyrightTemplate, artworkExportSize, creditProducerAsComposer })}>Save settings</button>
       </div>
     </Modal>
   );

@@ -31,7 +31,7 @@ export class KeyPreview {
 
   static toggleHold(name: string): void {
     if (!KeyTone.triad(name)) return;
-    if (this.snap.holding) this.stop();
+    if (this.snap.holding && this.snap.name === name) this.stop();
     else this.startDrone(name);
   }
 
@@ -159,10 +159,11 @@ export function HoldDrone(props: { name: string | null }) {
   const holding = Boolean(props.name && snap.holding && snap.name === props.name);
   return (
     <button
-      className={holding ? 'btn lock on' : 'btn lock'}
+      className={holding ? 'key-play on' : 'key-play'}
       type="button"
       disabled={!props.name}
       aria-pressed={holding}
+      aria-label={props.name ? `Hold ${props.name} root drone` : 'Key not measured yet'}
       title={props.name ? 'Hold the root while the beat plays' : 'Key not measured yet'}
       onClick={() => props.name && KeyPreview.toggleHold(props.name)}
     >

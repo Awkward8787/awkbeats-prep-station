@@ -163,7 +163,7 @@ As a producer, I want a status, notes, batch edits, and a CSV so that I can run 
 | FR-013 | Batch edit and batch analyze. | Must | Shipped | US-006 | `LibraryStore.batchUpdate`, `App.analyzeIds` |
 | FR-014 | Playback of the selected beat. | Should | Shipped | US-002 | `beat://audio/<id>`, `Inspector.tsx` |
 | FR-015 | Keyboard shortcuts for search, import, export, analyze, write, remove, status, playback. | Should | Shipped | US-002 | `App.tsx`, `dialogs.tsx` |
-| FR-016 | Settings: producer name (saved locally, pre-fills new beats), copyright template with `{year}` and `{producer}`, default cover export size. | Should | Shipped | US-001 | `DEFAULT_SETTINGS` |
+| FR-016 | Settings: producer name (saved locally, pre-fills new beats), copyright template with `{year}` and `{producer}`, default cover export size, and an off-by-default composer credit. | Should | Shipped | US-001 | `DEFAULT_SETTINGS` |
 | FR-017 | Show the audio file in the OS folder. | Should | Shipped | US-004 | `beat:reveal` |
 | FR-018 | Sidecar JPEG (`Beat.jpg` or `Beat.jpeg`) imported as cover. | Should | Shipped | US-001 | `Importer.sidecarJpeg` |
 | FR-019 | Remove from library without deleting the audio file. | Must | Shipped | US-006 | `LibraryStore.remove` |

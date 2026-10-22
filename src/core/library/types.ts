@@ -53,6 +53,8 @@ export type Settings = {
   artworkExportSize: 1500 | 3000;
   /** True after the producer dismisses the first-launch name sheet without saving a name. */
   producerPromptDismissed: boolean;
+  /** When true, the producer name is also written to the composer tag. Off by default. */
+  creditProducerAsComposer: boolean;
 };
 
 export type AnalysisResult = {
@@ -119,6 +121,7 @@ export const DEFAULT_SETTINGS: Settings = {
   copyrightTemplate: '© {year} {producer}',
   artworkExportSize: 3000,
   producerPromptDismissed: false,
+  creditProducerAsComposer: false,
 };
 
 /** Copyright line written on import when the file has no copyright tag. */
@@ -185,6 +188,10 @@ export class Format {
     const rounded = Math.round(value * 100) / 100;
     if (Math.abs(rounded - Math.round(rounded)) < 0.001) return String(Math.round(rounded));
     return rounded.toFixed(2);
+  }
+
+  static date(value: string): string {
+    return value.trim();
   }
 
   static duration(seconds: number | null | undefined): string {

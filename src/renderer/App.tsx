@@ -8,6 +8,7 @@ import { WebAudioDecode } from './decode';
 import { CropDialog, ShortcutsDialog, SettingsDialog, BatchDialog, ConfirmDialog, ProducerDialog } from './dialogs';
 import { Inspector } from './Inspector';
 import { KeyPreview } from './KeyPreview';
+import { ShortcutGuard } from './ShortcutGuard';
 import { Sidebar } from './Sidebar';
 import { TrackTable } from './TrackTable';
 
@@ -169,6 +170,18 @@ export function App() {
     setActiveId(id);
   }
 
+  const showProducer = Boolean(settings && beats.length === 0 && !settings.producerName && !settings.producerPromptDismissed && !dialog);
+
+  useEffect(() => {
+    KeyPreview.stop();
+  }, [activeId]);
+
+  useEffect(() => {
+    const stop = () => KeyPreview.stop();
+    window.addEventListener('blur', stop);
+    return () => window.removeEventListener('blur', stop);
+  }, []);
+
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
@@ -179,7 +192,8 @@ export function App() {
         if (dialog) setDialog(null);
         return;
       }
-      if (dialog || typing) return;
+      if (ShortcutGuard.controlOwnsKey(target, event.key)) return;
+      if (dialog || showProducer || typing) return;
       if (mod && event.key.toLowerCase() === 'f') {
         event.preventDefault();
         document.getElementById('library-search')?.focus();
@@ -207,7 +221,7 @@ export function App() {
       } else if (mod && event.key === 'Backspace') {
         event.preventDefault();
         setDialog({ type: 'remove' });
-      } else if (event.key.toLowerCase() === 'k' && active) {
+      } else if (!mod && !event.altKey && event.key.toLowerCase() === 'k' && active) {
         const name = KeyChoice.working(active).name;
         if (!name) return;
         event.preventDefault();
@@ -217,7 +231,7 @@ export function App() {
         const index = Math.max(0, visible.findIndex((beat) => beat.id === activeId));
         const next = visible[Math.min(visible.length - 1, Math.max(0, index + (event.key === 'ArrowDown' ? 1 : -1)))];
         if (next) choose(next.id, visible.indexOf(next), event);
-      } else if (event.key === ' ' && active && !target?.closest('table.tracks')) {
+      } else if (event.key === ' ' && active && ShortcutGuard.spacePlaysBeat(target)) {
         event.preventDefault();
         const audio = document.getElementById('beat-player') as HTMLAudioElement | null;
         if (!audio) return;
@@ -239,7 +253,6 @@ export function App() {
   }, [beats]);
 
   const mac = window.prep.platform === 'darwin';
-  const showProducer = Boolean(settings && beats.length === 0 && !settings.producerName && !settings.producerPromptDismissed && !dialog);
   const exportLabel = selected.length ? `Export ${selected.length} selected` : 'Export catalog';
   const progress = job && busy.length ? `Analyzing ${job.total - busy.length + 1} of ${job.total}…` : '';
 
@@ -283,7 +296,7 @@ export function App() {
           <span className="search-hint" aria-hidden="true"><kbd>{mac ? '⌘' : 'Ctrl'}</kbd><kbd>F</kbd></span>
         </div>
         <div className="top-actions">
-          <button className="btn btn-primary" type="button" onClick={() => void window.prep.pickAudio().then((paths) => importPaths(paths))}>Import beats</button>
+          <button className="btn" type="button" onClick={() => void window.prep.pickAudio().then((paths) => importPaths(paths))}>Import beats</button>
           <button
             className="btn"
             type="button"
@@ -295,7 +308,14 @@ export function App() {
       </header>
       <div className="workspace">
         <Sidebar filters={filters} counts={counts} beats={beats} onChange={setFilters} onClear={() => setFilters(emptyFilters)} />
-        <main id="library" className="table-wrap">
+        <main
+          id="library"
+          className="table-wrap"
+          onClick={(event) => {
+            const el = event.target as HTMLElement;
+            if (el === event.currentTarget || el.classList.contains('table-hint')) setSelected([]);
+          }}
+        >
           {beats.length === 0 ? (
             <div className="empty">
               <div className={dragOver ? 'drop-zone drag' : 'drop-zone'}>
@@ -316,19 +336,22 @@ export function App() {
               </div>
             </div>
           ) : (
-            <TrackTable
-              beats={visible}
-              selected={selected}
-              activeId={activeId}
-              busy={busy}
-              sortKey={sortKey}
-              sortDirection={sortDirection}
-              onSort={(key) => {
-                if (key === sortKey) setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-                else { setSortKey(key); setSortDirection(key === 'title' ? 'asc' : 'desc'); }
-              }}
-              onChoose={choose}
-            />
+            <>
+              <TrackTable
+                beats={visible}
+                selected={selected}
+                activeId={activeId}
+                busy={busy}
+                sortKey={sortKey}
+                sortDirection={sortDirection}
+                onSort={(key) => {
+                  if (key === sortKey) setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+                  else { setSortKey(key); setSortDirection(key === 'title' ? 'asc' : 'desc'); }
+                }}
+                onChoose={choose}
+              />
+              <p className="table-hint">Drop more beats anywhere to import them.</p>
+            </>
           )}
         </main>
         <Inspector

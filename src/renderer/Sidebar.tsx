@@ -23,7 +23,7 @@ export function Sidebar(props: {
     if (!props.filters.dateFrom && !props.filters.dateTo && added !== 'custom') setAdded('any');
   }, [props.filters.dateFrom, props.filters.dateTo, added]);
 
-  if (props.beats.length === 0) return <nav className="rail" aria-label="Library" />;
+  if (props.beats.length === 0) return null;
 
   const genres = [...new Set([...BeatCatalog.genres, ...props.beats.map((beat) => beat.genre).filter(Boolean)])];
   const keys = [...new Set(props.beats.flatMap((beat) => [beat.camelotDetected, beat.camelotOverride].filter((item): item is string => Boolean(item))))].sort();

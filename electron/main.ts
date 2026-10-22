@@ -1,7 +1,9 @@
 import { app, BrowserWindow, dialog, ipcMain, Menu, nativeImage, net, protocol, shell } from 'electron';
 import fs from 'node:fs';
 import path from 'node:path';
+import { Readable } from 'node:stream';
 import { pathToFileURL } from 'node:url';
+import { ByteRange } from '../src/core/audio/ByteRange';
 import { PcmDecoder } from '../src/core/audio/PcmDecoder';
 import { TrackAnalyzer } from '../src/core/analysis/TrackAnalyzer';
 import { CsvExport } from '../src/core/library/CsvExport';
@@ -176,7 +178,7 @@ app.whenReady().then(async () => {
     if (!beat) return new Response('Missing', { status: 404 });
     if (url.hostname === 'audio') {
       if (beat.missing) return new Response('Missing file', { status: 404 });
-      return netFetch(beat.filePath);
+      return serveAudio(request, beat.filePath);
     }
     if (url.hostname === 'cover') {
       const cover = store.artworkPath(id);
@@ -206,6 +208,42 @@ app.on('window-all-closed', () => {
 
 function netFetch(filePath: string): Promise<Response> {
   return net.fetch(pathToFileURL(filePath).toString());
+}
+
+function audioType(filePath: string): string {
+  const ext = path.extname(filePath).toLowerCase();
+  if (ext === '.mp3') return 'audio/mpeg';
+  if (ext === '.aiff' || ext === '.aif') return 'audio/aiff';
+  if (ext === '.flac') return 'audio/flac';
+  return 'audio/wav';
+}
+
+function serveAudio(request: Request, filePath: string): Response {
+  let size = 0;
+  try {
+    size = fs.statSync(filePath).size;
+  } catch {
+    return new Response('Missing file', { status: 404 });
+  }
+  const type = audioType(filePath);
+  const resolved = ByteRange.resolve(request.headers.get('range'), size);
+  if (resolved.kind === 'invalid') {
+    return new Response(null, { status: 416, headers: { 'Content-Range': `bytes */${size}` } });
+  }
+  const start = resolved.kind === 'partial' ? resolved.span.start : 0;
+  const end = resolved.kind === 'partial' ? resolved.span.end : size - 1;
+  const node = fs.createReadStream(filePath, { start, end });
+  request.signal.addEventListener('abort', () => node.destroy());
+  const headers: Record<string, string> = {
+    'Content-Type': type,
+    'Content-Length': String(end - start + 1),
+    'Accept-Ranges': 'bytes',
+  };
+  if (resolved.kind === 'partial') headers['Content-Range'] = `bytes ${start}-${end}/${size}`;
+  return new Response(Readable.toWeb(node) as ReadableStream, {
+    status: resolved.kind === 'partial' ? 206 : 200,
+    headers,
+  });
 }
 
 function registerIpc(): void {

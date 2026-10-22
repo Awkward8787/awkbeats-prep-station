@@ -82,6 +82,7 @@ erDiagram
     string copyrightTemplate
     int artworkExportSize
     boolean producerPromptDismissed
+    boolean creditProducerAsComposer
   }
   ARTWORK {
     string file
@@ -112,6 +113,7 @@ Caption: One library file holds many beats and one settings object. Artwork is a
 | copyrightTemplate | string | no | © {year} {producer} | `{year}` and `{producer}` replaced at import | Used only when the file has no copyright tag and the producer name is not empty. An empty producer leaves copyright blank. | © 2026 Nova Beats | no |
 | artworkExportSize | 1500 or 3000 | no | 3000 | only those two accepted in `updateSettings` | Default crop export | 3000 | no |
 | producerPromptDismissed | boolean | no | false | boolean | True after the first-launch producer sheet is saved or dismissed. | false | no |
+| creditProducerAsComposer | boolean | no | false | boolean | When true, the producer name is also written as the composer (ID3 TCOM, FLAC COMPOSER). Off leaves those frames out. | false | no |
 
 ### Beat
 
@@ -178,7 +180,7 @@ Key names come from `Camelot.roots`: C, C#, D, D#, E, F, F#, G, G#, A, A#, B, pl
 | --- | --- | --- | --- |
 | title | TIT2 | TITLE | |
 | artist | TPE1 | ARTIST | Performing artist. Empty stays empty. |
-| producer | TCOM, TIPL (`producer` + NUL + name), TXXX PRODUCER | COMPOSER and PRODUCER | Per-beat producer name |
+| producer | TIPL (`producer` + NUL + name), TXXX PRODUCER. TCOM only when `creditProducerAsComposer` is on. | PRODUCER. COMPOSER only when that setting is on. | Per-beat producer name |
 | genre | TCON | GENRE | |
 | comment | COMM eng | COMMENT | |
 | bpm | TBPM with two decimals | BPM | |
@@ -191,7 +193,7 @@ Key names come from `Camelot.roots`: C, C#, D, D#, E, F, F#, G, G#, A, A#, B, pl
 | date | TDRL and TYER when the first four chars are a year | DATE | |
 | artwork | APIC type 3 | PICTURE type 3 | |
 
-WAV also writes RIFF LIST/INFO: INAM title, IART artist, IPRO producer, IGNR, ICMT, ICRD, ICOP, ISBJ. IPRO is the INFO field this app uses for the producer name. The same WAV also gets an ID3 chunk with TPE1, TCOM, TIPL, and TXXX:PRODUCER. Existing INFO and `id3 ` chunks are replaced. Other RIFF chunks, including `data`, stay. AIFF writes NAME, AUTH (artist), ANNO, and the same ID3 chunk. FLAC Vorbis comments use ARTIST, PRODUCER, and COMPOSER.
+WAV also writes RIFF LIST/INFO: INAM title, IART artist, IPRO producer, IGNR, ICMT, ICRD, ICOP, ISBJ. IPRO is the INFO field this app uses for the producer name. The same WAV also gets an ID3 chunk with TPE1, TIPL, and TXXX:PRODUCER, plus TCOM when `creditProducerAsComposer` is on. Existing INFO and `id3 ` chunks are replaced. Other RIFF chunks, including `data`, stay. AIFF writes NAME, AUTH (artist), ANNO, and the same ID3 chunk. FLAC Vorbis comments use ARTIST and PRODUCER, and COMPOSER only when that setting is on.
 
 M4A / MP4 is not an import or export format, so no `©ART` or iTunes producer atom is written.
 

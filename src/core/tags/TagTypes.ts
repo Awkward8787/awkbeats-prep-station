@@ -21,6 +21,8 @@ export type TagPayload = {
   isrc: string;
   date: string;
   producer: string;
+  /** When true, the producer name is also written as the composer. */
+  creditProducerAsComposer?: boolean;
   artwork: ArtworkPayload | null;
 };
 
