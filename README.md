@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/banner.png" alt="AwkBeats Prep Station" width="100%">
+  <img src="assets/banner.png" alt="AwkBeats Prep Station" width="100%">
 </p>
 
 # AwkBeats Prep Station
@@ -18,6 +18,20 @@ Desktop catalog for preparing beats. It imports WAV, MP3, AIFF, and FLAC, measur
 Producer: Awkward J. Brand site: [awkbeats.com](https://awkbeats.com).
 
 The app is offline. The library is a JSON file in the operating system's app-data folder. Nothing is uploaded.
+
+
+## How it works
+
+```mermaid
+flowchart LR
+  A[Import audio files] --> B[Local BPM / key analysis]
+  B --> C[Edit metadata + cover]
+  C --> D[Write ID3 / Vorbis tags]
+  C --> E[Library JSON in app-data]
+  E --> F[Search / filter / play]
+```
+
+Everything runs offline on the desktop. Analysis and tag writes stay on the machine; the library file lives in the OS app-data folder (override with `AWKBEATS_USER_DATA`).
 
 ## What it does
 

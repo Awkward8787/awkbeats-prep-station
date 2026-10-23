@@ -11,3 +11,5 @@ user-data/
 .idea/
 .vscode/
 Thumbs.db
+*.swp
+*~
