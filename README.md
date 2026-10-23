@@ -1,4 +1,17 @@
+<p align="center">
+  <img src="docs/banner.png" alt="AwkBeats Prep Station" width="100%">
+</p>
+
 # AwkBeats Prep Station
+
+**Offline desktop catalog that imports beats, measures BPM and key on the machine, and writes metadata back into the audio files.**
+
+[![Installers](https://github.com/Awkward8787/awkbeats-prep-station/actions/workflows/installers.yml/badge.svg)](https://github.com/Awkward8787/awkbeats-prep-station/actions/workflows/installers.yml)
+[![Release](https://github.com/Awkward8787/awkbeats-prep-station/actions/workflows/release.yml/badge.svg)](https://github.com/Awkward8787/awkbeats-prep-station/actions/workflows/release.yml)
+[![License: Proprietary](https://img.shields.io/badge/license-proprietary-black)](LICENSE)
+![Electron](https://img.shields.io/badge/Electron-47848F?logo=electron&logoColor=white)
+![React](https://img.shields.io/badge/React-61DAFB?logo=react&logoColor=black)
+![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)
 
 Desktop catalog for preparing beats. It imports WAV, MP3, AIFF, and FLAC, measures tempo and musical key on the machine, and writes that metadata back into the audio files.
 
